@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QWidget)
 
 from app import settings, store, totp, vault
-from app.utils import copy_and_clear
+from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
 from ui.widgets.toasts import show_toast
@@ -175,7 +175,10 @@ class AccountsScreen(QWidget):
         code = totp.generate(d["secret"], digits=d["digits"],
                              period=d["period"], algo=d["algo"])
         copy_and_clear(code)
-        show_toast(self.w, f"Código copiado · se limpia en {settings.get_clipboard_sec()}s")
+        msg = f"Código copiado · se limpia en {settings.get_clipboard_sec()}s"
+        if clipboard_history_on():
+            msg += " · aviso: Win+V conserva historial fuera de la app"
+        show_toast(self.w, msg)
         # La semilla JAMAS va al clipboard persistente: solo el codigo de 6-8 digitos.
 
     def row_menu(self, acc_id: str, btn: QWidget):

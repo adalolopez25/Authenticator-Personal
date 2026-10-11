@@ -51,6 +51,11 @@ def _res(*parts: str) -> Path:
 def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Authenticator")
+    try:
+        from ui.widgets.winframe import setup_taskbar
+        setup_taskbar()
+    except Exception:
+        pass
     app.setWindowIcon(QIcon(str(_res("assets", "icon.png"))))
     qss = _res("ui", "styles", "theme_dark.qss")
     if qss.exists():

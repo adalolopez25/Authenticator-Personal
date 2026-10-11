@@ -55,6 +55,12 @@ class MainWindow(QMainWindow):
         self._idle.timeout.connect(self._check_idle)
         self._idle.start(10_000)
         anim.set_reduced(settings.get_reduced_motion())
+        try:
+            from ui.widgets.winframe import apply_dark_titlebar, watch_session_lock
+            apply_dark_titlebar(self)
+            watch_session_lock(self, self.lock)
+        except Exception:
+            pass
         # Pantalla inicial
         if store.vault_exists():
             self.show_unlock()

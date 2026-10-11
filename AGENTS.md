@@ -131,3 +131,12 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 4. (2026-10-11, heredado) **`bytearray(key)` copia la key (wipe no borra el original).**
    Estado: usar `bytearray` mutable extremo a extremo (`derive_key` ya lo devuelve); no convertir a `bytes` salvo en `AESGCM()` (solo lectura transitoria).
 5. (Reservado) Anotar aquí cada bug real con causa → solución → verificación, antes del siguiente commit.
+6. (2026-10-11) **`pyinstaller` no estaba en el PATH del shell** (CommandNotFoundException).
+   Solución: usar `python -m PyInstaller` en `installer/build.bat` y en terminal. Verificación: build de
+   `Authenticator.exe` (52 MB) + `Authenticator-Setup.exe` (99 MB) OK.
+7. (2026-10-11) **Pillow no lee SVG** (los iconos fuente son `icon.svg`).
+   Solución: renderizar con `QtSvg.QSvgRenderer` → `QImage` → `icon.png`, luego Pillow PNG→`icon.ico`
+   (16–256px). Sin dependencias nuevas. Verificación: ambos exes con icono embebido, arranque 15 s sin crash.
+8. (2026-10-11) **Faltaba bloqueo con Win+L/suspender y aviso Win+V** (gaps de auditoría).
+   Solución: portado `ui/widgets/winframe.py` (WTSRegisterSessionNotification + dark titlebar + AppUserModelID)
+   y `clipboard_history_on()` en `app/utils.py` con aviso en el toast de copia. Verificación: pytest verde + smoke offscreen.
