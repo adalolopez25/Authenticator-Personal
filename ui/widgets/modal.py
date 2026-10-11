@@ -20,8 +20,8 @@ class ModalHost(QDialog):
         lay.setContentsMargins(24, 24, 24, 24)
         self.card = QWidget(self)
         self.card.setObjectName("card")
-        self.card.setMinimumWidth(300)
-        self.card.setMaximumWidth(360)
+        self.card.setMinimumWidth(320)
+        self.card.setMaximumWidth(440)
         lay.addWidget(self.card)
 
     def getDimColor(self) -> str:

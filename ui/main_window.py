@@ -1,4 +1,10 @@
-"""MainWindow compacta vertical: auth 420x640, app 380x620. Sin sidebars."""
+"""MainWindow: ventana amplia en escritorio, columna unica centrada y responsive.
+
+Escritorio (Windows): ventana grande tipo app moderna (auth 500x760, app 900x940
+con columna de contenido de max 640 centrada). La columna estrecha centrada es
+la que se reutilizara tal cual en el futuro build Android (alla ocupa todo el
+ancho). Sin sidebars.
+"""
 from __future__ import annotations
 
 import time
@@ -11,6 +17,10 @@ from app import settings, store, vault
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
 
+AUTH_SIZE = (500, 760)
+APP_SIZE = (900, 940)
+CONTENT_MAX_WIDTH = 640
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -18,8 +28,8 @@ class MainWindow(QMainWindow):
         self.key: bytearray | None = None
         self._last_active = time.time()
         self.setWindowTitle("Authenticator")
-        self.resize(420, 640)
-        self.setMinimumSize(340, 520)
+        self.resize(*AUTH_SIZE)
+        self.setMinimumSize(380, 600)
         root = QWidget()
         root.setObjectName("root")
         self.setCentralWidget(root)
@@ -30,9 +40,9 @@ class MainWindow(QMainWindow):
         top = QWidget()
         top.setObjectName("sidebar")
         hl = QHBoxLayout(top)
-        hl.setContentsMargins(12, 8, 12, 8)
+        hl.setContentsMargins(16, 10, 16, 10)
         title = QLabel("Authenticator")
-        title.setStyleSheet("font-weight: 700; font-size: 14px;")
+        title.setStyleSheet("font-weight: 700; font-size: 15px;")
         hl.addWidget(title, 1)
         self.b_lock = QPushButton()
         self.b_lock.setObjectName("toolBtn")
@@ -47,8 +57,17 @@ class MainWindow(QMainWindow):
         hl.addWidget(self.b_lock)
         hl.addWidget(self.b_prefs)
         lay.addWidget(top)
+        # Columna centrada con ancho maximo: en escritorio respira a los lados,
+        # en movil (ancho < max) ocupa todo. El QStackedWidget es el contenido.
+        center = QHBoxLayout()
+        center.setContentsMargins(0, 0, 0, 0)
+        center.setSpacing(0)
         self.stack = QStackedWidget()
-        lay.addWidget(self.stack, 1)
+        self.stack.setMaximumWidth(CONTENT_MAX_WIDTH)
+        center.addStretch(1)
+        center.addWidget(self.stack, 1)
+        center.addStretch(1)
+        lay.addLayout(center, 1)
         # Autolock por inactividad
         from PySide6.QtCore import QTimer
         self._idle = QTimer(self)
@@ -83,7 +102,7 @@ class MainWindow(QMainWindow):
             old.deleteLater()
         self.stack.addWidget(w)
         self._last_active = time.time()
-        self.resize(380, 620) if app_mode else self.resize(420, 640)
+        self.resize(*APP_SIZE) if app_mode else self.resize(*AUTH_SIZE)
         has_key = self.key is not None
         self.b_lock.setVisible(has_key)
         self.b_prefs.setVisible(has_key and app_mode)

@@ -148,3 +148,13 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 10. (2026-10-11) **Release v1.0.0 quedó en draft por timeout** (150 MB de assets, subida lenta).
     Solución: `gh release upload` por asset + `gh release edit --draft=false`. Regla: publicar exige
     verificar `isDraft=false` y los 2 assets listados antes de darlo por hecho.
+11. (2026-10-11) **Crash `libshiboken: C++ object already deleted` en `stagger`** (traceback real del usuario).
+    Causa: `QTimer.singleShot` disparaba `rise_in` sobre filas ya borradas por un `reload` posterior.
+    Solución: guard `_alive()` (prueba `objectName()` con `except RuntimeError`) en TODOS los helpers de
+    `animations.py` + `try/except RuntimeError` en `_tick`/`refresh`. Verificación: stress 3×reload + ticks sin traceback.
+12. (2026-10-11) **Lista blanca en modo Fusion** (viewport del QScrollArea sin estilo).
+    Solución: base global `QWidget { background #1E1E1E }` + reglas `QScrollArea/viewport`, `QMenu`, `QToolTip`,
+    `QAbstractItemView`. Verificación: muestreo de píxeles offscreen → viewport (30,30,30), cero blanco.
+13. (2026-10-11) **Ventana 380×620 demasiado pequeña.**
+    Solución: app 900×940 / auth 500×760 (mínimo 380×600) + columna de contenido max 640 centrada:
+    en escritorio respira a los lados, en el futuro Android ocupa todo el ancho. Sin sidebars (restricción §11 intacta).

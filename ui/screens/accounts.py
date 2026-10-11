@@ -25,8 +25,8 @@ class AccountRow(QWidget):
         self.setObjectName("row")
         self.setCursor(Qt.PointingHandCursor)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(12, 10, 12, 10)
-        lay.setSpacing(4)
+        lay.setContentsMargins(14, 12, 14, 12)
+        lay.setSpacing(6)
         top = QHBoxLayout()
         name = QLabel(f"{issuer} · {label}" if issuer and label else (issuer or label or "Cuenta"))
         name.setObjectName("issuer")
@@ -45,16 +45,32 @@ class AccountRow(QWidget):
         self.bar.setRange(0, max(1, period))
         self.bar.setValue(max(0, remain))
         self.bar.setTextVisible(False)
-        self.bar.setFixedHeight(4)
+        self.bar.setFixedHeight(6)
         lay.addWidget(self.bar)
+        self._set_urgent(remain)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
         self.L.copy_code(self.acc_id)
         super().mousePressEvent(event)
 
+    def _set_urgent(self, remain: int) -> None:
+        """Barra roja en los ultimos 5s (repolish por propiedad dinamica)."""
+        urgent = remain <= 5
+        if self.bar.property("urgent") != urgent:
+            self.bar.setProperty("urgent", urgent)
+            try:
+                self.bar.style().unpolish(self.bar)
+                self.bar.style().polish(self.bar)
+            except RuntimeError:
+                pass
+
     def refresh(self, code: str, remain: int):
-        self.lbl_code.setText(f"{code[:len(code)//2]} {code[len(code)//2:]}" if len(code) > 4 else code)
-        self.bar.setValue(max(0, remain))
+        try:
+            self.lbl_code.setText(f"{code[:len(code)//2]} {code[len(code)//2:]}" if len(code) > 4 else code)
+            self.bar.setValue(max(0, remain))
+            self._set_urgent(remain)
+        except RuntimeError:
+            pass  # fila borrada entre ticks: el proximo reload la limpia
 
 
 class AccountsScreen(QWidget):
@@ -154,7 +170,10 @@ class AccountsScreen(QWidget):
         if self.w.key is None or not self.isVisible():
             return
         for i in range(self.vbox.count() - 1):
-            row = self.vbox.itemAt(i).widget()
+            try:
+                row = self.vbox.itemAt(i).widget()
+            except RuntimeError:
+                continue
             if not isinstance(row, AccountRow):
                 continue
             d = self.cache.get(row.acc_id)
@@ -164,7 +183,7 @@ class AccountsScreen(QWidget):
                 code = totp.generate(d["secret"], digits=d["digits"],
                                      period=d["period"], algo=d["algo"])
                 row.refresh(code, totp.seconds_remaining(period=d["period"]))
-            except ValueError:
+            except (ValueError, RuntimeError):
                 continue
 
     # ---- acciones ----
