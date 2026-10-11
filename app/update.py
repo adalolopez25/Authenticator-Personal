@@ -21,7 +21,7 @@ import urllib.parse
 import urllib.request
 
 REPO = "adalolopez25/Authenticator-Personal"
-API_LATEST = f"https://api.github.com/{REPO}/releases/latest"
+API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
 ALLOWED_HOSTS = {"api.github.com", "objects.githubusercontent.com",
                  "github.com", "release-assets.githubusercontent.com"}
 SETUP_ASSET = "Authenticator-Setup.exe"

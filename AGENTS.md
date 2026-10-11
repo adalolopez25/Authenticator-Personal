@@ -140,3 +140,11 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 8. (2026-10-11) **Faltaba bloqueo con Win+L/suspender y aviso Win+V** (gaps de auditoría).
    Solución: portado `ui/widgets/winframe.py` (WTSRegisterSessionNotification + dark titlebar + AppUserModelID)
    y `clipboard_history_on()` en `app/utils.py` con aviso en el toast de copia. Verificación: pytest verde + smoke offscreen.
+9. (2026-10-11) **URL de GitHub API sin `repos/`** (`api.github.com/{owner}/{repo}/...` → 404).
+   Causa: la ruta correcta es `api.github.com/repos/{owner}/{repo}/releases/latest`.
+   La detectó el test en vivo contra la API real (el mock con monkeypatch no la cubría).
+   Solución: `API_LATEST` corregida en `app/update.py`. Verificación: `fetch_latest()` real → 1.0.0 + setup_url válido;
+   `is_newer(1.0.0, 1.0.0)=False`, `is_newer(1.0.0, 0.9.0)=True`.
+10. (2026-10-11) **Release v1.0.0 quedó en draft por timeout** (150 MB de assets, subida lenta).
+    Solución: `gh release upload` por asset + `gh release edit --draft=false`. Regla: publicar exige
+    verificar `isDraft=false` y los 2 assets listados antes de darlo por hecho.
