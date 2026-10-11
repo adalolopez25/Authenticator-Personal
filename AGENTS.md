@@ -225,3 +225,9 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     `#row` (el pixel-check en esquina redondeada lo ocultó). REGLA: todo widget custom con fondo/borde QSS lo lleva;
     verificación = sample en composición de ventana, JAMÁS grab propio. Tests Qt siempre en subproceso
     (el teardown Qt en pytest rompe el proceso con -1073740791).
+22. (2026-10-11) **Modal de cuenta pro (600px): chips + borde tintado + feedback + Ctrl+C.**
+    Tarjeta 520–600, código 56px mono seleccionable, arte 76px, chips (`6 dígitos · 30 s · SHA1`),
+    borde de la tarjeta tintado con el color del emisor (`#previewCard[c]`), Copiar con estado "¡Copiado!" 1.2s,
+    atajo Ctrl+C, X con tooltip Esc. OJO: en un grab offscreen apareció un destello naranja transitorio en la
+    esquina del arte; el censo de píxeles del modal (12 colores top) NO contiene naranja — artefacto de frame
+    (deleteLater/repolish a medio pintar), no bug. Si reaparece en captura REAL, reabrir.

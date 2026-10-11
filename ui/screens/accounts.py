@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMes
                                QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
 
-from app import settings, store, vault
+from app import settings, store, totp, vault
 from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon

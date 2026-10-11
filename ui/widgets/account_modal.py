@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QMessageBox, QProgressBar,
                                QPushButton, QVBoxLayout, QWidget)
 
@@ -11,7 +12,7 @@ from app import settings, totp
 from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
-from ui.widgets.issuer import art_label
+from ui.widgets.issuer import art_label, color_index
 from ui.widgets.modal import ModalHost
 from ui.widgets.toasts import show_toast
 
@@ -23,65 +24,74 @@ class AccountModal(QWidget):
         self.w = window
         self.acc_id = acc_id
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(4, 4, 4, 4)
-        lay.setSpacing(12)
-        # Header: monograma + nombres + X
+        lay.setContentsMargins(6, 6, 6, 6)
+        lay.setSpacing(14)
+        # Header: arte + nombres + X
         head = QHBoxLayout()
         head.setContentsMargins(0, 0, 0, 0)
-        head.setSpacing(12)
+        head.setSpacing(14)
         self._head = head
-        self.art = art_label("", "", 64)
+        self.art = art_label("", "", 76)
         head.addWidget(self.art)
         names = QVBoxLayout()
         names.setContentsMargins(0, 0, 0, 0)
-        names.setSpacing(2)
+        names.setSpacing(3)
         self.lbl_issuer = QLabel("")
-        self.lbl_issuer.setStyleSheet("font-size: 18px; font-weight: 700;")
+        self.lbl_issuer.setStyleSheet("font-size: 20px; font-weight: 700;")
         names.addWidget(self.lbl_issuer)
         self.lbl_label = QLabel("")
         self.lbl_label.setObjectName("muted")
         names.addWidget(self.lbl_label)
+        self.chips = QHBoxLayout()
+        self.chips.setContentsMargins(0, 4, 0, 0)
+        self.chips.setSpacing(6)
+        names.addLayout(self.chips)
         head.addLayout(names, 1)
         b_x = QPushButton()
         b_x.setObjectName("iconBtn")
         b_x.setIcon(icon("x"))
-        b_x.setToolTip("Cerrar")
-        b_x.setFixedSize(36, 36)
+        b_x.setToolTip("Cerrar (Esc)")
+        b_x.setFixedSize(38, 38)
         b_x.clicked.connect(host.reject)
         head.addWidget(b_x, 0, Qt.AlignTop)
         lay.addLayout(head)
         # Tarjeta del codigo (el UNICO visible)
-        code_card = QWidget()
-        code_card.setObjectName("previewCard")
-        cl = QVBoxLayout(code_card)
-        cl.setContentsMargins(18, 16, 18, 16)
-        cl.setSpacing(8)
+        self.code_card = QWidget()
+        self.code_card.setObjectName("previewCard")
+        cl = QVBoxLayout(self.code_card)
+        cl.setContentsMargins(22, 20, 22, 20)
+        cl.setSpacing(10)
         cap = QLabel("CÓDIGO ACTUAL")
         cap.setObjectName("muted")
+        cap.setAlignment(Qt.AlignCenter)
         cl.addWidget(cap)
         self.lbl_code = QLabel("··· ···")
         self.lbl_code.setObjectName("modalCode")
         self.lbl_code.setAlignment(Qt.AlignCenter)
+        self.lbl_code.setTextInteractionFlags(Qt.TextSelectableByMouse)
         cl.addWidget(self.lbl_code)
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(10)
         self.bar = QProgressBar()
         self.bar.setObjectName("count")
         self.bar.setTextVisible(False)
-        self.bar.setFixedHeight(6)
+        self.bar.setFixedHeight(8)
         row.addWidget(self.bar, 1)
         self.lbl_remain = QLabel("")
         self.lbl_remain.setObjectName("remain")
+        self.lbl_remain.setStyleSheet("font-size: 15px;")
         row.addWidget(self.lbl_remain)
         cl.addLayout(row)
-        lay.addWidget(code_card)
+        lay.addWidget(self.code_card)
         # Copiar
         self.b_copy = QPushButton("Copiar código")
         self.b_copy.setObjectName("primary")
         self.b_copy.setIcon(icon("copy"))
-        self.b_copy.setToolTip("Copia el código actual")
+        self.b_copy.setToolTip("Copia el código actual (Ctrl+C)")
         self.b_copy.clicked.connect(self._copy)
         lay.addWidget(self.b_copy)
+        QShortcut(QKeySequence("Ctrl+C"), self, activated=self._copy)
         # Acciones segun modo
         trash = self._is_trash()
         grid = QHBoxLayout()
@@ -149,7 +159,7 @@ class AccountModal(QWidget):
             return
         iss, lab = d["issuer"], d["label"]
         try:
-            fresh = art_label(iss, lab, 64)
+            fresh = art_label(iss, lab, 76)
             old = self.art
             self.art = fresh
             self._head.replaceWidget(old, fresh)
@@ -158,6 +168,23 @@ class AccountModal(QWidget):
             pass
         self.lbl_issuer.setText(iss or lab or "Cuenta")
         self.lbl_label.setText(lab if iss else "")
+        try:
+            ci = str(color_index(iss))
+            if self.code_card.property("c") != ci:
+                self.code_card.setProperty("c", ci)
+                self.code_card.style().unpolish(self.code_card)
+                self.code_card.style().polish(self.code_card)
+            while self.chips.count():
+                item = self.chips.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+            for txt in (f"{d['digits']} dígitos", f"{d['period']} s", d["algo"].upper()):
+                chip = QLabel(txt)
+                chip.setObjectName("chip")
+                self.chips.addWidget(chip)
+            self.chips.addStretch(1)
+        except (RuntimeError, KeyError):
+            pass
 
     def _tick(self):
         d = self._entry()
@@ -187,6 +214,19 @@ class AccountModal(QWidget):
         try:
             self.w.scr.copy_code(self.acc_id)
         except (RuntimeError, AttributeError):
+            return
+        try:
+            self.b_copy.setText("¡Copiado!")
+            self.b_copy.setEnabled(False)
+            QTimer.singleShot(1200, self._restore_copy_btn)
+        except RuntimeError:
+            pass
+
+    def _restore_copy_btn(self):
+        try:
+            self.b_copy.setText("Copiar código")
+            self.b_copy.setEnabled(True)
+        except RuntimeError:
             pass
 
     def _rename(self):
@@ -234,10 +274,10 @@ def open_account_modal(window, acc_id: str) -> None:
     """Abre el modal del codigo unico (bloqueante, centrado)."""
     from PySide6.QtCore import QRect, QTimer
     host = ModalHost(window)
-    host.card.setMinimumWidth(400)
-    host.card.setMaximumWidth(460)
+    host.card.setMinimumWidth(520)
+    host.card.setMaximumWidth(600)
     lay = QVBoxLayout(host.card)
-    lay.setContentsMargins(20, 18, 20, 18)
+    lay.setContentsMargins(24, 22, 24, 22)
     lay.addWidget(AccountModal(host, window, acc_id))
     try:
         top = window.mapToGlobal(window.rect().topLeft())

@@ -276,9 +276,31 @@ QLabel#tileSub { color: #A9A9B0; font-size: 12px; }
 QLabel#modalCode {
   color: #FFFFFF;
   font-family: "Consolas";
-  font-size: 44px;
-  letter-spacing: 6px;
+  font-size: 56px;
+  letter-spacing: 8px;
 }
+QLabel#chip {
+  background-color: #1E1E1E;
+  border: 1px solid #3A3A3C;
+  border-radius: 10px;
+  padding: 5px 12px;
+  color: #A9A9B0;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* Borde de la tarjeta de codigo tintado con el color del emisor. */
+QWidget#previewCard[c="0"] { border: 1px solid #5F4BB0; }
+QWidget#previewCard[c="1"] { border: 1px solid #2F6F5E; }
+QWidget#previewCard[c="2"] { border: 1px solid #8A5A2B; }
+QWidget#previewCard[c="3"] { border: 1px solid #A03A4B; }
+QWidget#previewCard[c="4"] { border: 1px solid #2B5F8A; }
+QWidget#previewCard[c="5"] { border: 1px solid #6B3A7A; }
+QWidget#previewCard[c="6"] { border: 1px solid #3A7A3A; }
+QWidget#previewCard[c="7"] { border: 1px solid #8A8A2B; }
+QWidget#previewCard[c="8"] { border: 1px solid #4B6BB0; }
+QWidget#previewCard[c="9"] { border: 1px solid #B06B4B; }
+QWidget#previewCard[c="10"] { border: 1px solid #4B9A8A; }
+QWidget#previewCard[c="11"] { border: 1px solid #7A4B5E; }
 QLabel#emptyArt {
   color: #3A3A3C;
   font-size: 56px;
