@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
                                QLabel, QLineEdit, QListWidget, QMessageBox, QPushButton,
                                QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
@@ -25,7 +26,9 @@ class PrefsScreen(QWidget):
         # Sub-nav
         self.nav = QListWidget()
         self.nav.setObjectName("prefNav")
-        self.nav.setFixedWidth(190)
+        self.nav.setFixedWidth(196)
+        self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.nav.setWordWrap(False)
         self.nav.addItems(["General", "Seguridad", "Clave maestra",
                            "Recuperación y copias", "Actualizaciones", "Peligro"])
         try:

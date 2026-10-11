@@ -73,24 +73,41 @@ class MainWindow(QMainWindow):
         self.sidebar = None
 
     def _enter_auth(self, w: QWidget):
-        """Auth: columna centrada, max 560, sin sidebar."""
+        """Auth: tarjeta centrada con icono, max 560, sin sidebar."""
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QHBoxLayout, QLabel
+        from ui.widgets.icons import icon as _icon
         self._clear_root()
         self.setMinimumSize(380, 600)
         self.resize(*AUTH_SIZE)
         center = QHBoxLayout()
-        center.setContentsMargins(0, 0, 0, 0)
+        center.setContentsMargins(0, 24, 0, 24)
         box = QWidget()
         box.setMaximumWidth(560)
         bl = QVBoxLayout(box)
         bl.setContentsMargins(0, 0, 0, 0)
-        bl.addWidget(w)
+        bl.setSpacing(0)
+        card = QWidget()
+        card.setObjectName("card")
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(8, 20, 8, 8)
+        cl.setSpacing(4)
+        badge = QLabel()
+        badge.setObjectName("authIcon")
+        kind = type(w).__name__
+        badge.setPixmap(_icon("key" if "Kit" in kind else "lock").pixmap(30, 30))
+        badge.setFixedSize(60, 60)
+        badge.setAlignment(Qt.AlignCenter)
+        cl.addWidget(badge, 0, Qt.AlignCenter)
+        cl.addWidget(w)
+        bl.addWidget(card)
         center.addStretch(1)
         center.addWidget(box, 1)
         center.addStretch(1)
         wrap = QWidget()
         wrap.setLayout(center)
         self.root_lay.addWidget(wrap)
-        anim.fade_in(box, 200)
+        anim.fade_in(card, 220)
 
     def _enter_app(self):
         """App: sidebar + stack de paginas."""

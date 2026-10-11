@@ -184,3 +184,11 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     2-letras + botón copiar + menú; header con refrescar + Añadir; estado vacío con CTA; footer de ayuda.
     Sidebar con botón chevron ARRIBA (ocultar/mostrar). Regla: `_move(up)=-1` (hacia índice 0); se invirtió una
     vez al reescribir y se corrigió antes del commit.
+18. (2026-10-11) **Acabado moderno real (capturas del usuario): gradientes + tarjetas + subcontroles.**
+    `QPushButton#primary` y `sideBtn:checked` con `qlineargradient` violeta; `#row` con contraste real
+    (#2E2E32/borde #45454A, verificado por píxel) + hover elevado; filas con segundos restantes (`#remain`,
+    rojo en urgente); Añadir = header con icono + tarjeta + `previewCard` con código gigante + botones lado a lado;
+    auth envuelto en tarjeta con icono (lock/kit); `QSpinBox::up/down-button` y `QComboBox::drop-down` compactos
+    (eran flechas gigantes sin estilo); `QScrollBar:horizontal { height: 0 }` + `AlwaysOff` en el nav (barra fantasma).
+    OJO: métricas de scrollbar offscreen (100/30) son artefacto del plugin offscreen — en real se ven finas y no hay
+    warnings de parse del QSS; la verificación válida es captura real + pixel-check de colores.

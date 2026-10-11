@@ -18,11 +18,11 @@ QWidget#card, QFrame#card {
   border-radius: 12px;
 }
 QWidget#row {
-  background-color: #2C2C2E;
-  border: 1px solid #3A3A3C;
-  border-radius: 12px;
+  background-color: #2E2E32;
+  border: 1px solid #45454A;
+  border-radius: 14px;
 }
-QWidget#row:hover { border: 1px solid #7A63D6; }
+QWidget#row:hover { background-color: #34343C; border: 1px solid #7A63D6; }
 QWidget#row QLabel { background-color: transparent; }
 QWidget#row QProgressBar { background-color: transparent; }
 QLabel { color: #FFFFFF; background-color: transparent; }
@@ -43,7 +43,7 @@ QLabel#toast {
 }
 QLineEdit, QTextEdit, QComboBox, QSpinBox {
   background-color: #2C2C2E;
-  border: 1px solid #3A3A3C;
+  border: 1px solid #45454A;
   border-radius: 8px;
   padding: 8px 12px;
   color: #FFFFFF;
@@ -53,11 +53,33 @@ QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
   border: 2px solid #1A7CFF;
 }
 QLineEdit#search { border-radius: 16px; }
+/* Subcontroles compactos: sin flechas gigantes (ver captura Añadir). */
+QSpinBox::up-button, QSpinBox::down-button {
+  width: 26px;
+  border: none;
+  border-left: 1px solid #45454A;
+  background-color: transparent;
+  subcontrol-origin: border;
+}
+QSpinBox::up-button { subcontrol-position: top right; border-top-right-radius: 8px; }
+QSpinBox::down-button { subcontrol-position: bottom right; border-bottom-right-radius: 8px; }
+QSpinBox::up-button:hover, QSpinBox::down-button:hover { background-color: #33264D; }
+QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
+QComboBox::drop-down {
+  width: 30px;
+  border: none;
+  border-left: 1px solid #45454A;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+QComboBox::drop-down:hover { background-color: #33264D; }
+QComboBox::down-arrow { width: 10px; height: 10px; }
 QComboBox QAbstractItemView {
   background-color: #2C2C2E;
   color: #FFFFFF;
   selection-background-color: #1A7CFF;
-  border: 1px solid #3A3A3C;
+  border: 1px solid #45454A;
+  outline: none;
 }
 QPushButton {
   background-color: #2C2C2E;
@@ -68,7 +90,7 @@ QPushButton {
 }
 QPushButton:hover { border: 1px solid #7A63D6; }
 QPushButton#primary {
-  background-color: #6A58C4;
+  background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #7A63D6, stop:1 #5F4BB0);
   color: #FFFFFF;
   border: none;
   border-radius: 10px;
@@ -76,7 +98,8 @@ QPushButton#primary {
   font-weight: 600;
   font-size: 15px;
 }
-QPushButton#primary:hover { background-color: #8A72E0; }
+QPushButton#primary:hover { background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8A72E0, stop:1 #6A58C4); }
+QPushButton#primary:pressed { background-color: #5F4BB0; }
 QPushButton#primary:disabled { background-color: #3A3A3C; color: #A9A9B0; }
 QPushButton#ghost {
   background-color: transparent;
@@ -117,6 +140,32 @@ QScrollBar:vertical { background: transparent; width: 10px; }
 QScrollBar::handle:vertical { background: #3A3A3C; border-radius: 5px; min-height: 24px; }
 QScrollBar::handle:vertical:hover { background: #7A63D6; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+/* La app no necesita scroll horizontal en ningun panel: evita barras fantasma. */
+QScrollBar:horizontal { height: 0; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QLabel#remain {
+  color: #B8A6E0;
+  font-family: "Consolas";
+  font-size: 13px;
+  font-weight: 700;
+}
+QLabel#remain[urgent="true"] { color: #FF6B6B; }
+QWidget#previewCard {
+  background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #33264D, stop:1 #2A2138);
+  border: 1px solid #7A63D6;
+  border-radius: 14px;
+}
+QLabel#previewCode {
+  color: #FFFFFF;
+  font-family: "Consolas";
+  font-size: 30px;
+  letter-spacing: 5px;
+}
+QLabel#authIcon {
+  background-color: #33264D;
+  border: 1px solid #7A63D6;
+  border-radius: 32px;
+}
 QCheckBox { color: #FFFFFF; spacing: 8px; background-color: transparent; }
 QMenu {
   background-color: #2C2C2E;
@@ -154,7 +203,7 @@ QPushButton#sideBtn:hover {
   border: 1px solid transparent;
 }
 QPushButton#sideBtn:checked {
-  background-color: #3A2F5E;
+  background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #3A2F5E, stop:1 #2E2450);
   border: 1px solid #7A63D6;
   color: #FFFFFF;
   font-weight: 600;

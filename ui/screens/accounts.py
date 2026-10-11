@@ -60,15 +60,22 @@ class AccountRow(QWidget):
         self.bar.setFixedHeight(6)
         mid.addWidget(self.bar)
         lay.addLayout(mid, 1)
-        # Acciones: copiar + menu
+        # Acciones: menu + segundos + copiar
         side = QVBoxLayout()
         side.setContentsMargins(0, 0, 0, 0)
-        side.setSpacing(2)
+        side.setSpacing(4)
+        top_btns = QHBoxLayout()
+        top_btns.setContentsMargins(0, 0, 0, 0)
+        top_btns.setSpacing(4)
+        self.lbl_remain = QLabel(f"{remain}s")
+        self.lbl_remain.setObjectName("remain")
+        top_btns.addWidget(self.lbl_remain)
         self.b_menu = QPushButton("⋮")
         self.b_menu.setObjectName("toolBtn")
         self.b_menu.setFixedWidth(30)
         self.b_menu.clicked.connect(lambda: self.L.row_menu(self.acc_id, self.b_menu))
-        side.addWidget(self.b_menu, 0, Qt.AlignRight)
+        top_btns.addWidget(self.b_menu)
+        side.addLayout(top_btns)
         side.addStretch(1)
         self.b_copy = QPushButton()
         self.b_copy.setObjectName("iconBtn")
@@ -90,19 +97,21 @@ class AccountRow(QWidget):
         super().mousePressEvent(event)
 
     def _set_urgent(self, remain: int) -> None:
-        """Barra roja en los ultimos 5s (repolish por propiedad dinamica)."""
+        """Barra roja + segundos rojos en los ultimos 5s (repolish dinamico)."""
         urgent = remain <= 5
-        if self.bar.property("urgent") != urgent:
-            self.bar.setProperty("urgent", urgent)
-            try:
-                self.bar.style().unpolish(self.bar)
-                self.bar.style().polish(self.bar)
-            except RuntimeError:
-                pass
+        for w in (self.bar, self.lbl_remain):
+            if w.property("urgent") != urgent:
+                w.setProperty("urgent", urgent)
+                try:
+                    w.style().unpolish(w)
+                    w.style().polish(w)
+                except RuntimeError:
+                    pass
 
     def refresh(self, code: str, remain: int):
         try:
             self.lbl_code.setText(_fmt(code))
+            self.lbl_remain.setText(f"{remain}s")
             self.bar.setValue(max(0, remain))
             self._set_urgent(remain)
         except RuntimeError:

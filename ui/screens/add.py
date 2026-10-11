@@ -1,13 +1,14 @@
-"""Alta compacta: secreto base32 o URI otpauth:// + validacion con codigo esperado."""
+"""Alta de cuenta: tarjeta de formulario + vista previa en vivo del codigo."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QFormLayout, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QComboBox, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
                                QMessageBox, QPushButton, QSpinBox, QVBoxLayout,
                                QWidget)
 
 from app import store, totp, vault
 from ui.styles import animations as anim
+from ui.widgets.icons import icon
 from ui.widgets.toasts import show_toast
 
 
@@ -16,19 +17,47 @@ class AddScreen(QWidget):
         super().__init__()
         self.w = window
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(20, 16, 20, 16)
-        lay.setSpacing(8)
-        top = QLabel("Añadir cuenta")
-        top.setStyleSheet("font-size: 18px; font-weight: 700;")
-        lay.addWidget(top)
+        lay.setContentsMargins(24, 20, 24, 20)
+        lay.setSpacing(12)
+        # Header con icono
+        head = QHBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(12)
+        badge = QLabel()
+        badge.setObjectName("authIcon")
+        badge.setPixmap(icon("plus").pixmap(28, 28))
+        badge.setFixedSize(56, 56)
+        badge.setAlignment(Qt.AlignCenter)
+        head.addWidget(badge)
+        titles = QVBoxLayout()
+        titles.setContentsMargins(0, 0, 0, 0)
+        titles.setSpacing(2)
+        t = QLabel("Añadir cuenta")
+        t.setStyleSheet("font-size: 22px; font-weight: 700;")
+        titles.addWidget(t)
+        s = QLabel("Pega el secreto o la URI otpauth:// del proveedor")
+        s.setObjectName("muted")
+        titles.addWidget(s)
+        head.addLayout(titles, 1)
+        lay.addLayout(head)
+        # Tarjeta de formulario
+        card = QWidget()
+        card.setObjectName("card")
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(18, 16, 18, 16)
+        cl.setSpacing(10)
         form = QFormLayout()
-        form.setSpacing(8)
+        form.setSpacing(10)
+        form.setLabelAlignment(Qt.AlignRight)
         self.e_issuer = QLineEdit()
         self.e_issuer.setPlaceholderText("Emisor (p. ej. Mi Servicio)")
+        self.e_issuer.setClearButtonEnabled(True)
         self.e_label = QLineEdit()
         self.e_label.setPlaceholderText("Etiqueta (p. ej. usuario@ejemplo.com)")
+        self.e_label.setClearButtonEnabled(True)
         self.e_secret = QLineEdit()
         self.e_secret.setPlaceholderText("Secreto base32 o URI otpauth:// completa")
+        self.e_secret.setClearButtonEnabled(True)
         self.e_secret.textChanged.connect(self._preview)
         self.s_digits = QSpinBox()
         self.s_digits.setRange(6, 8)
@@ -36,46 +65,86 @@ class AddScreen(QWidget):
         self.s_period = QSpinBox()
         self.s_period.setRange(10, 300)
         self.s_period.setValue(30)
+        self.s_digits.valueChanged.connect(lambda: self._preview())
+        self.s_period.valueChanged.connect(lambda: self._preview())
         self.c_algo = QComboBox()
         self.c_algo.addItems(["SHA1", "SHA256", "SHA512"])
+        self.c_algo.currentTextChanged.connect(lambda: self._preview())
         form.addRow("Emisor", self.e_issuer)
         form.addRow("Etiqueta", self.e_label)
-        form.addRow("Secreto/URI", self.e_secret)
-        form.addRow("Dígitos", self.s_digits)
-        form.addRow("Periodo (s)", self.s_period)
-        form.addRow("Algoritmo", self.c_algo)
-        lay.addLayout(form)
-        # Checksum visual: primer codigo esperado (valida sin guardar nada)
-        self.lbl_prev = QLabel("Vista previa: —")
-        self.lbl_prev.setObjectName("muted")
-        self.lbl_prev.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
-        lay.addWidget(self.lbl_prev)
-        hint = QLabel("Sin cámara en MVP: pega el secreto o la URI que da el proveedor.")
-        hint.setObjectName("muted")
-        hint.setWordWrap(True)
-        lay.addWidget(hint)
-        row_btns = QVBoxLayout()
-        self.b_save = QPushButton("Guardar")
-        self.b_save.setObjectName("primary")
-        self.b_save.clicked.connect(self._save)
+        form.addRow("Secreto / URI", self.e_secret)
+        row_opt = QHBoxLayout()
+        row_opt.setContentsMargins(0, 0, 0, 0)
+        row_opt.setSpacing(8)
+        for lab, wid in (("Dígitos", self.s_digits), ("Periodo (s)", self.s_period),
+                         ("Algoritmo", self.c_algo)):
+            cell = QVBoxLayout()
+            cell.setContentsMargins(0, 0, 0, 0)
+            cell.setSpacing(4)
+            l = QLabel(lab)
+            l.setObjectName("muted")
+            cell.addWidget(l)
+            cell.addWidget(wid)
+            row_opt.addLayout(cell, 1)
+        cl.addLayout(form)
+        cl.addLayout(row_opt)
+        lay.addWidget(card)
+        # Vista previa en vivo (checksum visual)
+        prev = QWidget()
+        prev.setObjectName("previewCard")
+        pl = QHBoxLayout(prev)
+        pl.setContentsMargins(18, 14, 18, 14)
+        pl.setSpacing(12)
+        ptxt = QVBoxLayout()
+        ptxt.setContentsMargins(0, 0, 0, 0)
+        ptxt.setSpacing(2)
+        l1 = QLabel("CÓDIGO ESPERADO AHORA")
+        l1.setObjectName("muted")
+        ptxt.addWidget(l1)
+        self.lbl_code = QLabel("— — —")
+        self.lbl_code.setObjectName("previewCode")
+        ptxt.addWidget(self.lbl_code)
+        self.lbl_hint = QLabel("Escríbelo en el proveedor para verificar")
+        self.lbl_hint.setObjectName("muted")
+        self.lbl_hint.setWordWrap(True)
+        ptxt.addWidget(self.lbl_hint)
+        pl.addLayout(ptxt, 1)
+        self.lbl_state = QLabel()
+        self.lbl_state.setPixmap(icon("shield").pixmap(40, 40))
+        pl.addWidget(self.lbl_state)
+        lay.addWidget(prev)
+        # Acciones lado a lado
+        btns = QHBoxLayout()
+        btns.setContentsMargins(0, 0, 0, 0)
+        btns.setSpacing(10)
         self.b_back = QPushButton("Volver")
         self.b_back.setObjectName("ghost")
+        self.b_back.setIcon(icon("chev_l"))
         self.b_back.clicked.connect(lambda: self.w.show_accounts())
-        row_btns.addWidget(self.b_save)
-        row_btns.addWidget(self.b_back)
-        lay.addLayout(row_btns)
+        self.b_save = QPushButton("Guardar cuenta")
+        self.b_save.setObjectName("primary")
+        self.b_save.setIcon(icon("check"))
+        self.b_save.clicked.connect(self._save)
+        btns.addWidget(self.b_back, 1)
+        btns.addWidget(self.b_save, 2)
+        lay.addLayout(btns)
         lay.addStretch(1)
+        anim.stagger([card, prev])
 
     def _preview(self):
         raw = self.e_secret.text().strip()
         if not raw:
-            self.lbl_prev.setText("Vista previa: —")
+            self.lbl_code.setText("— — —")
+            self.lbl_hint.setText("Escríbelo en el proveedor para verificar")
+            self.lbl_state.setPixmap(icon("shield").pixmap(40, 40))
             return
         try:
             if raw.lower().startswith("otpauth://"):
                 p = totp.parse_uri(raw)
-                self.e_issuer.setText(p["issuer"] or self.e_issuer.text())
-                self.e_label.setText(p["label"] or self.e_label.text())
+                if not self.e_issuer.text().strip() and p["issuer"]:
+                    self.e_issuer.setText(p["issuer"])
+                if not self.e_label.text().strip() and p["label"]:
+                    self.e_label.setText(p["label"])
                 self.s_digits.setValue(p["digits"])
                 self.s_period.setValue(p["period"])
                 self.c_algo.setCurrentText(p["algo"].upper())
@@ -89,9 +158,13 @@ class AddScreen(QWidget):
                 code = totp.generate(sec, digits=self.s_digits.value(),
                                       period=self.s_period.value(),
                                       algo=self.c_algo.currentText())
-            self.lbl_prev.setText(f"Código esperado ahora: {code}  (verifícalo con el proveedor)")
+            self.lbl_code.setText(f"{code[:len(code) // 2]} {code[len(code) // 2:]}")
+            self.lbl_hint.setText("Coincide con tu proveedor: es válido. Guárdalo.")
+            self.lbl_state.setPixmap(icon("check").pixmap(40, 40))
         except ValueError:
-            self.lbl_prev.setText("Secreto inválido: revisa el base32 o la URI.")
+            self.lbl_code.setText("— — —")
+            self.lbl_hint.setText("Secreto inválido: revisa el base32 o la URI.")
+            self.lbl_state.setPixmap(icon("alert").pixmap(40, 40))
 
     def _save(self):
         key = self.w.key

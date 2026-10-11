@@ -31,7 +31,11 @@ class Sidebar(QWidget):
         # Header: marca + ocultar
         head = QHBoxLayout()
         head.setContentsMargins(0, 0, 0, 0)
-        head.setSpacing(6)
+        head.setSpacing(8)
+        self.brand_icon = QLabel()
+        self.brand_icon.setPixmap(icon("lock").pixmap(22, 22))
+        self.brand_icon.setFixedSize(26, 26)
+        head.addWidget(self.brand_icon)
         self.brand = QLabel("Authenticator")
         self.brand.setObjectName("brand")
         head.addWidget(self.brand, 1)
@@ -113,6 +117,7 @@ class Sidebar(QWidget):
         anim.collapse_width(self, target, 220)
         if self._collapsed:
             self.brand.setText("A")
+            self.brand_icon.setVisible(False)
             self._cap.setVisible(False)
             for b in self.buttons.values():
                 b.setText("")
@@ -123,6 +128,7 @@ class Sidebar(QWidget):
             self.set_trash_count(self._trash_n)
         else:
             self.brand.setText("Authenticator")
+            self.brand_icon.setVisible(True)
             self._cap.setVisible(True)
             for key, label in (("accounts", "Cuentas"), ("add", "Añadir cuenta"),
                                ("trash", "Papelera"), ("prefs", "Preferencias")):
