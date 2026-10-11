@@ -110,15 +110,14 @@ class MainWindow(QMainWindow):
         hl.addWidget(self.stack, 1)
         self.root_lay.addWidget(body)
         # Paginas persistentes (una sola lista viva, un solo QTimer).
+        # OJO: Preferencias NO es pagina: es modal centrado (show_prefs).
         from ui.screens.accounts import AccountsScreen
         from ui.screens.add import AddScreen
-        from ui.screens.prefs import PrefsScreen
         self.scr = AccountsScreen(self)
         self.scr.counts_changed.connect(
             lambda a, b: self.sidebar.set_trash_count(b) if self.sidebar else None)
         self._add = AddScreen(self)
-        self._prefs = PrefsScreen(self)
-        for p in (self.scr, self._add, self._prefs):
+        for p in (self.scr, self._add):
             self.stack.addWidget(p)
         try:
             from app.version import APP_VERSION
@@ -131,14 +130,15 @@ class MainWindow(QMainWindow):
             self.stack.setCurrentWidget(self.scr)
             self.scr.set_trash_mode(key == "trash")
             self.sidebar.set_active(key)
+            anim.fade_in(self.stack.currentWidget(), 180)
         elif key == "add":
             self.stack.setCurrentWidget(self._add)
             self.sidebar.set_active("add")
+            anim.fade_in(self.stack.currentWidget(), 180)
         elif key == "prefs":
-            self.stack.setCurrentWidget(self._prefs)
-            self._prefs.refresh_stats()
-            self.sidebar.set_active("prefs")
-        anim.fade_in(self.stack.currentWidget(), 180)
+            # Modal centrado: la pagina de fondo no cambia.
+            self.show_prefs()
+            return
         self._last_active = time.time()
 
     # ---- navegacion ----
@@ -175,9 +175,9 @@ class MainWindow(QMainWindow):
         self._navigate("add")
 
     def show_prefs(self):
-        if self.sidebar is None:
-            self._enter_app()
-        self._navigate("prefs")
+        # Preferencias = modal centrado profesional (no cambia de pagina).
+        from ui.screens.prefs import open_prefs_modal
+        open_prefs_modal(self)
 
     # ---- bloqueo ----
     def lock(self):

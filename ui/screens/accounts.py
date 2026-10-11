@@ -1,8 +1,7 @@
-"""Vista de cuentas: columna unica reutilizable (escritorio y futuro Android)."""
+"""Vista de cuentas: header con acciones, filas con avatar + copiar, estado vacio."""
 from __future__ import annotations
 
 import base64
-import time
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -16,6 +15,16 @@ from ui.widgets.icons import icon
 from ui.widgets.toasts import show_toast
 
 
+def _initials(issuer: str, label: str) -> str:
+    base = (issuer or label or "?").strip()
+    parts = [p for p in base.replace("@", " ").replace(".", " ").split() if p]
+    if not parts:
+        return "?"
+    if len(parts) == 1:
+        return parts[0][:2].upper()
+    return (parts[0][0] + parts[1][0]).upper()
+
+
 class AccountRow(QWidget):
     def __init__(self, parent_list, acc_id: str, issuer: str, label: str,
                  code: str, remain: int, period: int, trash_mode: bool = False):
@@ -24,32 +33,59 @@ class AccountRow(QWidget):
         self.acc_id = acc_id
         self.setObjectName("row")
         self.setCursor(Qt.PointingHandCursor)
-        lay = QVBoxLayout(self)
+        lay = QHBoxLayout(self)
         lay.setContentsMargins(14, 12, 14, 12)
-        lay.setSpacing(6)
-        top = QHBoxLayout()
+        lay.setSpacing(12)
+        # Avatar 2 letras
+        av = QLabel(_initials(issuer, label))
+        av.setObjectName("avatar")
+        av.setFixedSize(46, 46)
+        av.setAlignment(Qt.AlignCenter)
+        lay.addWidget(av)
+        # Centro: nombre + codigo + countdown
+        mid = QVBoxLayout()
+        mid.setContentsMargins(0, 0, 0, 0)
+        mid.setSpacing(4)
         name = QLabel(f"{issuer} · {label}" if issuer and label else (issuer or label or "Cuenta"))
         name.setObjectName("issuer")
-        top.addWidget(name, 1)
-        self.b_menu = QPushButton("⋮")
-        self.b_menu.setObjectName("toolBtn")
-        self.b_menu.setFixedWidth(30)
-        self.b_menu.clicked.connect(lambda: self.L.row_menu(self.acc_id, self.b_menu))
-        top.addWidget(self.b_menu)
-        lay.addLayout(top)
-        self.lbl_code = QLabel(f"{code[:len(code)//2]} {code[len(code)//2:]}" if len(code) > 4 else code)
+        mid.addWidget(name)
+        self.lbl_code = QLabel(_fmt(code))
         self.lbl_code.setObjectName("code")
-        lay.addWidget(self.lbl_code)
+        mid.addWidget(self.lbl_code)
         self.bar = QProgressBar()
         self.bar.setObjectName("count")
         self.bar.setRange(0, max(1, period))
         self.bar.setValue(max(0, remain))
         self.bar.setTextVisible(False)
         self.bar.setFixedHeight(6)
-        lay.addWidget(self.bar)
+        mid.addWidget(self.bar)
+        lay.addLayout(mid, 1)
+        # Acciones: copiar + menu
+        side = QVBoxLayout()
+        side.setContentsMargins(0, 0, 0, 0)
+        side.setSpacing(2)
+        self.b_menu = QPushButton("⋮")
+        self.b_menu.setObjectName("toolBtn")
+        self.b_menu.setFixedWidth(30)
+        self.b_menu.clicked.connect(lambda: self.L.row_menu(self.acc_id, self.b_menu))
+        side.addWidget(self.b_menu, 0, Qt.AlignRight)
+        side.addStretch(1)
+        self.b_copy = QPushButton()
+        self.b_copy.setObjectName("iconBtn")
+        self.b_copy.setIcon(icon("copy"))
+        self.b_copy.setToolTip("Copiar código")
+        self.b_copy.setFixedSize(34, 34)
+        self.b_copy.clicked.connect(lambda: self.L.copy_code(self.acc_id))
+        side.addWidget(self.b_copy, 0, Qt.AlignRight)
+        lay.addLayout(side)
         self._set_urgent(remain)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
+        # Clic en la fila (no en botones) = copiar.
+        child = self.childAt(event.pos())
+        if isinstance(child, QPushButton) or (child and isinstance(child.parent(), QPushButton)):
+            super().mousePressEvent(event)
+            return
         self.L.copy_code(self.acc_id)
         super().mousePressEvent(event)
 
@@ -66,11 +102,46 @@ class AccountRow(QWidget):
 
     def refresh(self, code: str, remain: int):
         try:
-            self.lbl_code.setText(f"{code[:len(code)//2]} {code[len(code)//2:]}" if len(code) > 4 else code)
+            self.lbl_code.setText(_fmt(code))
             self.bar.setValue(max(0, remain))
             self._set_urgent(remain)
         except RuntimeError:
             pass  # fila borrada entre ticks: el proximo reload la limpia
+
+
+def _fmt(code: str) -> str:
+    return f"{code[:len(code) // 2]} {code[len(code) // 2:]}" if len(code) > 4 else code
+
+
+class EmptyState(QWidget):
+    """Estado vacio profesional con icono + CTA."""
+
+    def __init__(self, trash: bool = False, on_add=None):
+        super().__init__()
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(20, 48, 20, 48)
+        lay.setSpacing(10)
+        lay.setAlignment(Qt.AlignCenter)
+        art = QLabel("◈" if not trash else "○")
+        art.setObjectName("emptyArt")
+        art.setAlignment(Qt.AlignCenter)
+        lay.addWidget(art)
+        t = QLabel("Papelera vacía" if trash else "Sin cuentas todavía")
+        t.setStyleSheet("font-size: 17px; font-weight: 700;")
+        t.setAlignment(Qt.AlignCenter)
+        lay.addWidget(t)
+        s = QLabel("Los elementos eliminados esperan aquí 30 días." if trash
+                   else "Añade tu primera cuenta con el secreto o la URI del proveedor.")
+        s.setObjectName("muted")
+        s.setWordWrap(True)
+        s.setAlignment(Qt.AlignCenter)
+        lay.addWidget(s)
+        if not trash and on_add is not None:
+            b = QPushButton("Añadir mi primera cuenta")
+            b.setObjectName("primary")
+            b.setIcon(icon("plus"))
+            b.clicked.connect(on_add)
+            lay.addWidget(b, 0, Qt.AlignCenter)
 
 
 class AccountsScreen(QWidget):
@@ -80,40 +151,60 @@ class AccountsScreen(QWidget):
         super().__init__()
         self.w = window
         self.trash_mode = False
-        self.cache: dict[str, dict] = {}  # acc_id -> {issuer,label,secret,digits,period,algo}
+        self.cache: dict[str, dict] = {}
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setContentsMargins(24, 20, 24, 20)
         lay.setSpacing(10)
-        # Titulo de seccion (lo fija el sidebar: Cuentas / Papelera)
+        # Header: titulo + subtitulo + acciones
+        head = QHBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(8)
+        titles = QVBoxLayout()
+        titles.setContentsMargins(0, 0, 0, 0)
+        titles.setSpacing(2)
         self.lbl_title = QLabel("Cuentas")
-        self.lbl_title.setStyleSheet("font-size: 20px; font-weight: 700;")
-        lay.addWidget(self.lbl_title)
+        self.lbl_title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        titles.addWidget(self.lbl_title)
+        self.lbl_count = QLabel("")
+        self.lbl_count.setObjectName("muted")
+        titles.addWidget(self.lbl_count)
+        head.addLayout(titles, 1)
+        self.b_refresh = QPushButton()
+        self.b_refresh.setObjectName("iconBtn")
+        self.b_refresh.setIcon(icon("refresh"))
+        self.b_refresh.setToolTip("Recargar")
+        self.b_refresh.setFixedSize(38, 38)
+        self.b_refresh.clicked.connect(lambda: self.reload())
+        head.addWidget(self.b_refresh)
+        self.b_add_top = QPushButton("Añadir")
+        self.b_add_top.setObjectName("primary")
+        self.b_add_top.setIcon(icon("plus"))
+        self.b_add_top.clicked.connect(lambda: self.w.show_add())
+        head.addWidget(self.b_add_top)
+        lay.addLayout(head)
         # Buscador
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setPlaceholderText("Buscar cuenta…")
+        self.search.addAction(icon("search"), QLineEdit.LeadingPosition)
         self.search.textChanged.connect(lambda: self.reload(keep_codes=True))
         lay.addWidget(self.search)
-        self.lbl_count = QLabel("")
-        self.lbl_count.setObjectName("muted")
-        lay.addWidget(self.lbl_count)
         # Lista scrolleable
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QScrollArea.NoFrame)
         self.inner = QWidget()
         self.vbox = QVBoxLayout(self.inner)
-        self.vbox.setContentsMargins(0, 0, 0, 0)
-        self.vbox.setSpacing(8)
+        self.vbox.setContentsMargins(0, 2, 0, 2)
+        self.vbox.setSpacing(10)
         self.vbox.addStretch(1)
         self.scroll.setWidget(self.inner)
         lay.addWidget(self.scroll, 1)
-        # Barra + Añadir
-        self.b_add = QPushButton("+ Añadir")
-        self.b_add.setObjectName("primary")
-        self.b_add.setIcon(icon("plus"))
-        self.b_add.clicked.connect(lambda: self.w.show_add())
-        lay.addWidget(self.b_add)
+        # Footer
+        self.lbl_foot = QLabel("")
+        self.lbl_foot.setObjectName("muted")
+        self.lbl_foot.setAlignment(Qt.AlignCenter)
+        lay.addWidget(self.lbl_foot)
         # Refresco por QTimer (1s): recalcula codigos + countdown
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
@@ -144,11 +235,14 @@ class AccountsScreen(QWidget):
                    if q in d["issuer"].lower() or q in d["label"].lower()]
         else:
             ids = list(self.cache.keys())
-        # Limpia filas
+        # Limpia filas (y posible estado vacio anterior)
         while self.vbox.count() > 1:
             item = self.vbox.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+        if not ids:
+            empty = EmptyState(trash=self.trash_mode, on_add=lambda: self.w.show_add())
+            self.vbox.insertWidget(self.vbox.count() - 1, empty)
         for acc_id in ids:
             d = self.cache[acc_id]
             code = totp.generate(d["secret"], digits=d["digits"],
@@ -159,8 +253,9 @@ class AccountsScreen(QWidget):
             row.setProperty("acc", acc_id)
             self.vbox.insertWidget(self.vbox.count() - 1, row)
         a, b = store.count_accounts()
-        self.lbl_count.setText(f"{b} en papelera · se purgan a los 30 días" if self.trash_mode
-                               else f"{a} cuentas · clic en una fila para copiar")
+        self.lbl_count.setText(f"{b} en papelera · purga a los 30 días" if self.trash_mode
+                               else f"{a} cuentas protegidas con AES-256-GCM")
+        self.lbl_foot.setText("Clic en una fila o en Copiar para copiar · se auto-limpia" if ids else "")
         try:
             self.counts_changed.emit(a, b)
         except RuntimeError:
@@ -174,6 +269,7 @@ class AccountsScreen(QWidget):
         self.trash_mode = trash
         self.lbl_title.setText("Papelera" if trash else "Cuentas")
         self.search.clear()
+        self.b_add_top.setVisible(not trash)
         self.reload()
 
     def _tick(self):

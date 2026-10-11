@@ -178,3 +178,9 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     6 secciones (General/Seguridad/Clave/Recuperación y copias/Actualizaciones/Peligro). Android futuro = mismas
     pantallas en columna sin sidebar. Transiciones fade al navegar + `collapse_width` (QParallelAnimationGroup
     sobre min/maxWidth) para el sidebar.
+17. (2026-10-11) **Segunda vuelta UI: prefs a modal + iconos + filas pro.**
+    Preferencias = modal centrado bloqueante 880–960×620–700 con header+X (ya NO es página del stack: el sidebar
+    restaura su selección al cerrar). Iconos 12→27 en `icons.py` (nav, filas, prefs, acciones). Filas con avatar
+    2-letras + botón copiar + menú; header con refrescar + Añadir; estado vacío con CTA; footer de ayuda.
+    Sidebar con botón chevron ARRIBA (ocultar/mostrar). Regla: `_move(up)=-1` (hacia índice 0); se invirtió una
+    vez al reescribir y se corrigió antes del commit.

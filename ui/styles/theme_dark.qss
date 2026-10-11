@@ -167,6 +167,32 @@ QLabel#badge {
   font-size: 12px;
   font-weight: 700;
 }
+QLabel#navCap {
+  color: #A9A9B0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 10px;
+}
+QLabel#avatar {
+  background-color: #3A2F5E;
+  border: 1px solid #7A63D6;
+  border-radius: 23px;
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 700;
+}
+QLabel#emptyArt {
+  color: #3A3A3C;
+  font-size: 56px;
+}
+QPushButton#iconBtn {
+  background-color: transparent;
+  border: 1px solid #3A3A3C;
+  border-radius: 8px;
+  padding: 4px;
+  color: #B8A6E0;
+}
+QPushButton#iconBtn:hover { border: 1px solid #7A63D6; color: #FFFFFF; }
 /* Sub-nav de Preferencias */
 QListWidget#prefNav {
   background-color: #2A2138;

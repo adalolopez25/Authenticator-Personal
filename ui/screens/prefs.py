@@ -18,6 +18,7 @@ class PrefsScreen(QWidget):
     def __init__(self, window):
         super().__init__()
         self.w = window
+        self._host = None  # lo fija open_prefs_modal para poder cerrarse
         lay = QHBoxLayout(self)
         lay.setContentsMargins(16, 14, 16, 14)
         lay.setSpacing(12)
@@ -27,6 +28,14 @@ class PrefsScreen(QWidget):
         self.nav.setFixedWidth(190)
         self.nav.addItems(["General", "Seguridad", "Clave maestra",
                            "Recuperación y copias", "Actualizaciones", "Peligro"])
+        try:
+            from ui.widgets.icons import icon as _ic
+            for row, name in enumerate(["grid", "shield", "key", "download", "refresh", "alert"]):
+                item = self.nav.item(row)
+                if item is not None:
+                    item.setIcon(_ic(name))
+        except Exception:
+            pass
         self.nav.setCurrentRow(0)
         lay.addWidget(self.nav)
         self.pages = QStackedWidget()
@@ -256,6 +265,13 @@ class PrefsScreen(QWidget):
         lay.addWidget(c)
         return self._wrap(box)
 
+    def _close_host(self):
+        try:
+            if self._host is not None:
+                self._host.accept()
+        except (RuntimeError, Exception):
+            pass
+
     def _kit(self):
         from PySide6.QtWidgets import QDialog, QDialogButtonBox
         d = QDialog(self)
@@ -277,6 +293,7 @@ class PrefsScreen(QWidget):
         except ValueError as e:
             QMessageBox.warning(self, "Aviso", str(e))
             return
+        self._close_host()
         self.w.show_kit(code, first_time=True)
 
     def _export(self):
@@ -389,6 +406,7 @@ class PrefsScreen(QWidget):
         store.wipe_all()
         vault.wipe(key)
         show_toast(self.w, "Bóveda borrada")
+        self._close_host()
         self.w.lock()
 
 
@@ -396,6 +414,55 @@ def _h(t: str) -> QLabel:
     l = QLabel(t)
     l.setStyleSheet("font-size: 16px; font-weight: 700;")
     return l
+
+
+def open_prefs_modal(window) -> None:
+    """Preferencias en modal centrado profesional (bloqueante, con X)."""
+    from PySide6.QtCore import QRect, QTimer
+    from ui.styles import animations as _anim
+    from ui.widgets.icons import icon as _icon
+    from ui.widgets.modal import ModalHost
+
+    host = ModalHost(window)
+    host.card.setMinimumSize(880, 620)
+    host.card.setMaximumSize(960, 700)
+    lay = QVBoxLayout(host.card)
+    lay.setContentsMargins(20, 16, 20, 16)
+    lay.setSpacing(10)
+    head = QHBoxLayout()
+    head.setContentsMargins(0, 0, 0, 0)
+    title = QLabel("Preferencias")
+    title.setStyleSheet("font-size: 20px; font-weight: 700;")
+    head.addWidget(title, 1)
+    b_x = QPushButton()
+    b_x.setObjectName("iconBtn")
+    b_x.setIcon(_icon("x"))
+    b_x.setToolTip("Cerrar")
+    b_x.setFixedSize(36, 36)
+    b_x.clicked.connect(host.reject)
+    head.addWidget(b_x)
+    lay.addLayout(head)
+    prefs = PrefsScreen(window)
+    prefs._host = host
+    prefs.refresh_stats()
+    lay.addWidget(prefs, 1)
+    # Geometria de pantalla completa (igual que open_animated) + exec bloqueante.
+    try:
+        top = window.mapToGlobal(window.rect().topLeft())
+        host.setGeometry(QRect(top, window.size()))
+    except Exception:
+        pass
+    QTimer.singleShot(60, lambda: _anim.fade_in(host.card, 200))
+    try:
+        host.exec()
+    finally:
+        try:
+            sb = getattr(window, "sidebar", None)
+            if sb is not None and getattr(window, "scr", None) is not None:
+                sb.set_active("trash" if window.scr.trash_mode else "accounts")
+        except (RuntimeError, Exception):
+            pass
+        host.deleteLater()
 
 
 def _muted(t: str) -> QLabel:

@@ -1,4 +1,8 @@
-"""Sidebar de navegacion (solo modo escritorio/app). Colapsable con animacion."""
+"""Sidebar de navegacion (solo modo escritorio/app). Colapsable con animacion.
+
+Header con marca + boton chevron para ocultar/mostrar (como la otra app).
+Abajo: bloquear + version.
+"""
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
@@ -8,8 +12,8 @@ from PySide6.QtWidgets import (QButtonGroup, QHBoxLayout, QLabel, QPushButton,
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
 
-EXPANDED = 248
-COLLAPSED = 68
+EXPANDED = 252
+COLLAPSED = 72
 
 
 class Sidebar(QWidget):
@@ -22,21 +26,36 @@ class Sidebar(QWidget):
         self._collapsed = False
         self._trash_n = 0
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(12, 14, 12, 14)
-        lay.setSpacing(4)
-        brand = QLabel("Authenticator")
-        brand.setObjectName("brand")
-        lay.addWidget(brand)
-        self._brand = brand
-        lay.addSpacing(8)
+        lay.setContentsMargins(14, 12, 14, 14)
+        lay.setSpacing(6)
+        # Header: marca + ocultar
+        head = QHBoxLayout()
+        head.setContentsMargins(0, 0, 0, 0)
+        head.setSpacing(6)
+        self.brand = QLabel("Authenticator")
+        self.brand.setObjectName("brand")
+        head.addWidget(self.brand, 1)
+        self.b_fold = QPushButton()
+        self.b_fold.setObjectName("toolBtn")
+        self.b_fold.setIcon(icon("chev_l"))
+        self.b_fold.setToolTip("Ocultar barra lateral")
+        self.b_fold.setFixedSize(32, 32)
+        self.b_fold.clicked.connect(self.toggle)
+        head.addWidget(self.b_fold)
+        lay.addLayout(head)
+        lay.addSpacing(10)
+        cap = QLabel("PRINCIPAL")
+        cap.setObjectName("navCap")
+        lay.addWidget(cap)
+        self._cap = cap
         self.group = QButtonGroup(self)
         self.group.setExclusive(True)
         self.buttons: dict[str, QPushButton] = {}
         self.badges: dict[str, QLabel] = {}
-        for key, label, ic in (("accounts", "Cuentas", "key"),
+        for key, label, ic in (("accounts", "Cuentas", "grid"),
                                ("add", "Añadir cuenta", "plus"),
                                ("trash", "Papelera", "trash"),
-                               ("prefs", "Preferencias", "gear")):
+                               ("prefs", "Preferencias", "sliders")):
             row = QHBoxLayout()
             row.setContentsMargins(0, 0, 0, 0)
             row.setSpacing(4)
@@ -54,23 +73,14 @@ class Sidebar(QWidget):
             self.badges[key] = badge
             row.addWidget(badge)
             lay.addLayout(row)
-            setattr(self, f"_row_{key}", row)
         lay.addStretch(1)
         self.lbl_ver = QLabel("")
         self.lbl_ver.setObjectName("muted")
         lay.addWidget(self.lbl_ver)
-        bottom = QHBoxLayout()
         self.b_lock = QPushButton("Bloquear")
         self.b_lock.setObjectName("ghost")
         self.b_lock.setIcon(icon("lock"))
-        bottom.addWidget(self.b_lock, 1)
-        self.b_fold = QPushButton("«")
-        self.b_fold.setObjectName("toolBtn")
-        self.b_fold.setToolTip("Colapsar barra")
-        self.b_fold.setFixedWidth(36)
-        self.b_fold.clicked.connect(self.toggle)
-        bottom.addWidget(self.b_fold)
-        lay.addLayout(bottom)
+        lay.addWidget(self.b_lock)
 
     def _go(self, key: str):
         anim.press_scale(self.buttons[key])
@@ -93,25 +103,32 @@ class Sidebar(QWidget):
             self.buttons["trash"].setText("" if self._collapsed else "Papelera")
 
     def set_version(self, v: str):
-        self.lbl_ver.setText(f"v{v}")
+        self._ver = v
+        if not self._collapsed:
+            self.lbl_ver.setText(f"v{v}")
 
     def toggle(self):
         self._collapsed = not self._collapsed
         target = COLLAPSED if self._collapsed else EXPANDED
         anim.collapse_width(self, target, 220)
         if self._collapsed:
-            for key, b in self.buttons.items():
+            self.brand.setText("A")
+            self._cap.setVisible(False)
+            for b in self.buttons.values():
                 b.setText("")
             self.lbl_ver.setText("")
-            self._brand.setText("A")
             self.b_lock.setText("")
-            self.b_fold.setText("»")
+            self.b_fold.setIcon(icon("chev_r"))
+            self.b_fold.setToolTip("Mostrar barra lateral")
             self.set_trash_count(self._trash_n)
         else:
+            self.brand.setText("Authenticator")
+            self._cap.setVisible(True)
             for key, label in (("accounts", "Cuentas"), ("add", "Añadir cuenta"),
                                ("trash", "Papelera"), ("prefs", "Preferencias")):
                 self.buttons[key].setText(label)
-            self._brand.setText("Authenticator")
             self.b_lock.setText("Bloquear")
-            self.b_fold.setText("«")
+            self.b_fold.setIcon(icon("chev_l"))
+            self.b_fold.setToolTip("Ocultar barra lateral")
             self.set_trash_count(self._trash_n)
+            self.set_version(getattr(self, "_ver", "?"))
