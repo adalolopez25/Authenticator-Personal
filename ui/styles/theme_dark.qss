@@ -1,0 +1,89 @@
+/* Authenticator — tema oscuro violeta (archivo propio, UNICO lugar de colores). */
+QMainWindow, QWidget#root, QDialog {
+  background: #1E1E1E;
+  color: #FFFFFF;
+  font-family: "Segoe UI";
+  font-size: 13px;
+}
+QWidget#sidebar { background: #2A2138; }
+QWidget#card, QFrame#card {
+  background: #2C2C2E;
+  border: 1px solid #3A3A3C;
+  border-radius: 10px;
+}
+QWidget#row {
+  background: #2C2C2E;
+  border: 1px solid #3A3A3C;
+  border-radius: 10px;
+}
+QWidget#row:hover { border: 1px solid #7A63D6; }
+QLabel { color: #FFFFFF; }
+QLabel#muted, QLabel#label { color: #A9A9B0; }
+QLabel#issuer { color: #B8A6E0; font-size: 12px; }
+QLabel#code {
+  color: #FFFFFF;
+  font-family: "Consolas";
+  font-size: 22px;
+  letter-spacing: 3px;
+}
+QLineEdit, QTextEdit, QComboBox, QSpinBox {
+  background: #2C2C2E;
+  border: 1px solid #3A3A3C;
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #FFFFFF;
+  selection-background-color: #1A7CFF;
+}
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+  border: 2px solid #1A7CFF;
+}
+QLineEdit#search { border-radius: 14px; }
+QPushButton#primary {
+  background: #6A58C4;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-weight: 600;
+}
+QPushButton#primary:hover { background: #8A72E0; }
+QPushButton#ghost {
+  background: transparent;
+  border: 1px solid #3A3A3C;
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: #FFFFFF;
+}
+QPushButton#ghost:hover { border: 1px solid #7A63D6; }
+QPushButton#danger {
+  background: transparent;
+  border: 1px solid #FF6B6B;
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: #FF6B6B;
+}
+QPushButton#toolBtn {
+  background: transparent;
+  border: none;
+  color: #A9A9B0;
+  padding: 4px 8px;
+}
+QPushButton#toolBtn:hover { color: #FFFFFF; }
+QProgressBar#count {
+  background: #3A3A3C;
+  border: none;
+  border-radius: 2px;
+  height: 4px;
+  text-align: center;
+}
+QProgressBar#count::chunk { background: #7A63D6; border-radius: 2px; }
+QScrollBar:vertical { background: transparent; width: 8px; }
+QScrollBar::handle:vertical { background: #3A3A3C; border-radius: 4px; min-height: 24px; }
+QCheckBox { color: #FFFFFF; spacing: 8px; }
+QLabel#toast {
+  background: #33264D;
+  border: 1px solid #7A63D6;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #FFFFFF;
+}

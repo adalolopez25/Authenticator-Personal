@@ -1,0 +1,7 @@
+data/
+*.db
+*.vault
+.venv/
+__pycache__/
+dist/
+build/

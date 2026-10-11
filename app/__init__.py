@@ -1,0 +1,1 @@
+"""Authenticator. Paquete app autocontenido."""
