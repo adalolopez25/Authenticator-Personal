@@ -248,6 +248,35 @@ QLabel#avatar {
   font-size: 16px;
   font-weight: 700;
 }
+/* Monograma de mosaico: 12 colores fijos por emisor (propiedad `c`). */
+QLabel#tileMono { border-radius: 18px; color: #FFFFFF; font-size: 30px; font-weight: 700; }
+QLabel#tileMono[c="0"] { background-color: #5F4BB0; }
+QLabel#tileMono[c="1"] { background-color: #2F6F5E; }
+QLabel#tileMono[c="2"] { background-color: #8A5A2B; }
+QLabel#tileMono[c="3"] { background-color: #A03A4B; }
+QLabel#tileMono[c="4"] { background-color: #2B5F8A; }
+QLabel#tileMono[c="5"] { background-color: #6B3A7A; }
+QLabel#tileMono[c="6"] { background-color: #3A7A3A; }
+QLabel#tileMono[c="7"] { background-color: #8A8A2B; }
+QLabel#tileMono[c="8"] { background-color: #4B6BB0; }
+QLabel#tileMono[c="9"] { background-color: #B06B4B; }
+QLabel#tileMono[c="10"] { background-color: #4B9A8A; }
+QLabel#tileMono[c="11"] { background-color: #7A4B5E; }
+QWidget#tile {
+  background-color: #2E2E32;
+  border: 1px solid #45454A;
+  border-radius: 16px;
+}
+QWidget#tile:hover { border: 1px solid #7A63D6; background-color: #34343C; }
+QWidget#tile QLabel { background-color: transparent; }
+QLabel#tileName { color: #FFFFFF; font-size: 15px; font-weight: 700; }
+QLabel#tileSub { color: #A9A9B0; font-size: 12px; }
+QLabel#modalCode {
+  color: #FFFFFF;
+  font-family: "Consolas";
+  font-size: 44px;
+  letter-spacing: 6px;
+}
 QLabel#emptyArt {
   color: #3A3A3C;
   font-size: 56px;

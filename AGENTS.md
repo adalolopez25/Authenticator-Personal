@@ -206,3 +206,12 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
        (Vaciar papelera). Contadores cortos ("2 cuentas", sin "protegidas con...").
     g) Secciones con `_section(icono, titulo)` + stat tiles con número grande; sub-nav sin h-scroll.
     h) Verificación UI: stagger/tick tolerantes + pixel-check de tarjeta + cols 2↔1 + salida limpia RC=0.
+20. (2026-10-11) **Vista Cuentas paso 1: mosaicos + modal de código único.**
+    Decisión del usuario: NINGÚN código en la lista (con 20+ cuentas no se entiende nada).
+    Mosaicos grandes (`AccountTile` 200×150 mín): monograma 2-letras 76px con color determinista por emisor
+    (`ui/widgets/issuer.py`: sha256→12 colores FIJOS en QSS `#tileMono[c]`, nada de `random`), emisor + etiqueta.
+    Clic = `AccountModal` (400–460px) con el ÚNICO código en vivo (QTimer propio, 44px mono), barra + segundos,
+    Copiar primario y acciones (Renombrar/Subir/Bajar/Eliminar o Restaurar/Eliminar-definitivo en papelera).
+    Grid `width//240` (1–4 cols) con stretch igual: siempre llena el lado derecho, cero hueco.
+    Sin logos de marcas (assets): offline + marcas + calidad del trazo a mano → monogramas como Google Authenticator.
+    El modal cierra solo si se bloquea/elimina; cada tick renueva `_last_active` (mirar ≠ inactivo).

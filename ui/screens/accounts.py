@@ -1,125 +1,62 @@
-"""Vista de cuentas: header con acciones, filas con avatar + copiar, estado vacio."""
+"""Vista de cuentas: mosaicos grandes por emisor; el codigo vive en su modal."""
 from __future__ import annotations
 
 import base64
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-                               QProgressBar, QPushButton, QScrollArea, QVBoxLayout,
+                               QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
 
-from app import settings, store, totp, vault
+from app import settings, store, vault
 from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
+from ui.widgets.issuer import color_index, initials
 from ui.widgets.toasts import show_toast
 
 
-def _initials(issuer: str, label: str) -> str:
-    base = (issuer or label or "?").strip()
-    parts = [p for p in base.replace("@", " ").replace(".", " ").split() if p]
-    if not parts:
-        return "?"
-    if len(parts) == 1:
-        return parts[0][:2].upper()
-    return (parts[0][0] + parts[1][0]).upper()
+class AccountTile(QWidget):
+    """Mosaico grande: monograma + nombres. Clic = modal con el codigo unico."""
 
-
-class AccountRow(QWidget):
-    def __init__(self, parent_list, acc_id: str, issuer: str, label: str,
-                 code: str, remain: int, period: int, trash_mode: bool = False):
+    def __init__(self, parent_list, acc_id: str, issuer: str, label: str):
         super().__init__()
         self.L = parent_list
         self.acc_id = acc_id
-        self.setObjectName("row")
+        self.setObjectName("tile")
         self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumSize(200, 150)
+        self.setToolTip(f"Ver código de {issuer or label or 'la cuenta'}")
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(14, 12, 14, 12)
-        lay.setSpacing(12)
-        # Avatar 2 letras
-        av = QLabel(_initials(issuer, label))
-        av.setObjectName("avatar")
-        av.setFixedSize(46, 46)
-        av.setAlignment(Qt.AlignCenter)
-        lay.addWidget(av)
-        # Centro: nombre + codigo + countdown
-        mid = QVBoxLayout()
-        mid.setContentsMargins(0, 0, 0, 0)
-        mid.setSpacing(4)
-        name = QLabel(f"{issuer} · {label}" if issuer and label else (issuer or label or "Cuenta"))
-        name.setObjectName("issuer")
-        mid.addWidget(name)
-        self.lbl_code = QLabel(_fmt(code))
-        self.lbl_code.setObjectName("code")
-        mid.addWidget(self.lbl_code)
-        self.bar = QProgressBar()
-        self.bar.setObjectName("count")
-        self.bar.setRange(0, max(1, period))
-        self.bar.setValue(max(0, remain))
-        self.bar.setTextVisible(False)
-        self.bar.setFixedHeight(6)
-        mid.addWidget(self.bar)
-        lay.addLayout(mid, 1)
-        # Acciones: menu + segundos + copiar
-        side = QVBoxLayout()
-        side.setContentsMargins(0, 0, 0, 0)
-        side.setSpacing(4)
-        top_btns = QHBoxLayout()
-        top_btns.setContentsMargins(0, 0, 0, 0)
-        top_btns.setSpacing(4)
-        self.lbl_remain = QLabel(f"{remain}s")
-        self.lbl_remain.setObjectName("remain")
-        top_btns.addWidget(self.lbl_remain)
-        self.b_menu = QPushButton("⋮")
-        self.b_menu.setObjectName("toolBtn")
-        self.b_menu.setFixedWidth(30)
-        self.b_menu.clicked.connect(lambda: self.L.row_menu(self.acc_id, self.b_menu))
-        top_btns.addWidget(self.b_menu)
-        side.addLayout(top_btns)
-        side.addStretch(1)
-        self.b_copy = QPushButton()
-        self.b_copy.setObjectName("iconBtn")
-        self.b_copy.setIcon(icon("copy"))
-        self.b_copy.setToolTip("Copiar código")
-        self.b_copy.setFixedSize(34, 34)
-        self.b_copy.clicked.connect(lambda: self.L.copy_code(self.acc_id))
-        side.addWidget(self.b_copy, 0, Qt.AlignRight)
-        lay.addLayout(side)
-        self._set_urgent(remain)
+        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setSpacing(14)
+        mono = QLabel(initials(issuer, label))
+        mono.setObjectName("tileMono")
+        mono.setProperty("c", str(color_index(issuer)))
+        mono.setFixedSize(76, 76)
+        mono.setAlignment(Qt.AlignCenter)
+        lay.addWidget(mono)
+        txt = QVBoxLayout()
+        txt.setContentsMargins(0, 0, 0, 0)
+        txt.setSpacing(4)
+        name = QLabel(issuer or label or "Cuenta")
+        name.setObjectName("tileName")
+        name.setWordWrap(True)
+        txt.addWidget(name)
+        sub = QLabel(label if issuer else "")
+        sub.setObjectName("tileSub")
+        sub.setWordWrap(True)
+        txt.addWidget(sub)
+        txt.addStretch(1)
+        lay.addLayout(txt, 1)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        # Clic en la fila (no en botones) = copiar.
-        child = self.childAt(event.pos())
-        if isinstance(child, QPushButton) or (child and isinstance(child.parent(), QPushButton)):
-            super().mousePressEvent(event)
-            return
-        self.L.copy_code(self.acc_id)
-        super().mousePressEvent(event)
-
-    def _set_urgent(self, remain: int) -> None:
-        """Barra roja + segundos rojos en los ultimos 5s (repolish dinamico)."""
-        urgent = remain <= 5
-        for w in (self.bar, self.lbl_remain):
-            if w.property("urgent") != urgent:
-                w.setProperty("urgent", urgent)
-                try:
-                    w.style().unpolish(w)
-                    w.style().polish(w)
-                except RuntimeError:
-                    pass
-
-    def refresh(self, code: str, remain: int):
+        from ui.widgets.account_modal import open_account_modal
         try:
-            self.lbl_code.setText(_fmt(code))
-            self.lbl_remain.setText(f"{remain}s")
-            self.bar.setValue(max(0, remain))
-            self._set_urgent(remain)
-        except RuntimeError:
-            pass  # fila borrada entre ticks: el proximo reload la limpia
-
-
-def _fmt(code: str) -> str:
-    return f"{code[:len(code) // 2]} {code[len(code) // 2:]}" if len(code) > 4 else code
+            open_account_modal(self.L.w, self.acc_id)
+        except (RuntimeError, AttributeError):
+            pass
+        super().mousePressEvent(event)
 
 
 class EmptyState(QWidget):
@@ -217,10 +154,6 @@ class AccountsScreen(QWidget):
         self.b_empty.clicked.connect(self._empty_trash)
         self.b_empty.setVisible(False)
         lay.addWidget(self.b_empty, 0, Qt.AlignRight)
-        # Refresco por QTimer (1s): recalcula codigos + countdown
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self._tick)
-        self.timer.start(1000)
 
     # ---- datos ----
     def reload(self, keep_codes: bool = False):
@@ -261,13 +194,9 @@ class AccountsScreen(QWidget):
             self.grid.addWidget(empty, 0, 0, 1, cols)
         for n, acc_id in enumerate(ids):
             d = self.cache[acc_id]
-            code = totp.generate(d["secret"], digits=d["digits"],
-                                 period=d["period"], algo=d["algo"])
-            remain = totp.seconds_remaining(period=d["period"])
-            row = AccountRow(self, acc_id, d["issuer"], d["label"], code,
-                             remain, d["period"], self.trash_mode)
-            row.setProperty("acc", acc_id)
-            self.grid.addWidget(row, n // cols, n % cols)
+            tile = AccountTile(self, acc_id, d["issuer"], d["label"])
+            tile.setProperty("acc", acc_id)
+            self.grid.addWidget(tile, n // cols, n % cols)
         self.grid.setRowStretch((len(ids) + cols - 1) // cols + 1, 1)
         a, b = store.count_accounts()
         self.lbl_count.setText(f"{b} en papelera" if self.trash_mode else f"{a} cuentas")
@@ -277,15 +206,15 @@ class AccountsScreen(QWidget):
         except RuntimeError:
             pass
         if not keep_codes:
-            anim.stagger([w for w in self._iter_rows()])
+            anim.stagger([w for w in self._iter_tiles()])
 
-    def _iter_rows(self):
+    def _iter_tiles(self):
         for i in range(self.grid.count()):
             try:
                 w = self.grid.itemAt(i).widget()
             except RuntimeError:
                 continue
-            if isinstance(w, AccountRow):
+            if isinstance(w, AccountTile):
                 yield w
 
     def set_trash_mode(self, trash: bool):
@@ -305,8 +234,9 @@ class AccountsScreen(QWidget):
             pass
 
     def _cols_for_width(self) -> int:
+        """Columnas según ancho: mosaicos ~240px que siempre llenan el lado derecho."""
         try:
-            return 2 if self.width() >= 760 else 1
+            return max(1, min(4, self.width() // 240))
         except RuntimeError:
             return 1
 
@@ -323,20 +253,6 @@ class AccountsScreen(QWidget):
         show_toast(self.w, "Papelera vaciada")
         self.reload(keep_codes=True)
 
-    def _tick(self):
-        if self.w.key is None or not self.isVisible():
-            return
-        for row in self._iter_rows():
-            d = self.cache.get(row.acc_id)
-            if not d:
-                continue
-            try:
-                code = totp.generate(d["secret"], digits=d["digits"],
-                                     period=d["period"], algo=d["algo"])
-                row.refresh(code, totp.seconds_remaining(period=d["period"]))
-            except (ValueError, RuntimeError):
-                continue
-
     # ---- acciones ----
     def copy_code(self, acc_id: str):
         d = self.cache.get(acc_id)
@@ -351,34 +267,9 @@ class AccountsScreen(QWidget):
         show_toast(self.w, msg)
         # La semilla JAMAS va al clipboard persistente: solo el codigo de 6-8 digitos.
 
-    def row_menu(self, acc_id: str, btn: QWidget):
-        from PySide6.QtGui import QAction
-        from PySide6.QtWidgets import QMenu
-        m = QMenu(self)
-        if self.trash_mode:
-            a_res = QAction("Restaurar", self)
-            a_res.triggered.connect(lambda: self._restore(acc_id))
-            a_del = QAction("Eliminar definitivo", self)
-            a_del.triggered.connect(lambda: self._hard_delete(acc_id))
-            m.addActions([a_res, a_del])
-        else:
-            a_ren = QAction("Renombrar", self)
-            a_ren.triggered.connect(lambda: self._rename(acc_id))
-            a_up = QAction("Subir", self)
-            a_up.triggered.connect(lambda: self._move(acc_id, -1))
-            a_dn = QAction("Bajar", self)
-            a_dn.triggered.connect(lambda: self._move(acc_id, 1))
-            a_del = QAction("Eliminar (papelera)", self)
-            a_del.triggered.connect(lambda: self._soft_delete(acc_id))
-            m.addActions([a_ren, a_up, a_dn, a_del])
-        try:
-            m.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
-        except Exception:
-            pass
-
     def _soft_delete(self, acc_id: str):
         store.delete_account(acc_id)
-        show_toast(self.w, "Movido a la papelera (30 días)")
+        show_toast(self.w, "Movida a la papelera")
         self.reload(keep_codes=True)
 
     def _restore(self, acc_id: str):
