@@ -1,6 +1,7 @@
 """Pantalla auth: kit offline (mostrar una vez / usar / rotar)."""
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QLabel, QLineEdit, QMessageBox, QPushButton,
                                QVBoxLayout, QWidget)
 
@@ -51,7 +52,7 @@ class KitScreen(QWidget):
             lay.addWidget(info)
             box = QLabel(code or "")
             box.setWordWrap(True)
-            box.setTextInteractionFlags(box.textInteractionFlags() | 0x02 | 0x10)
+            box.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
             box.setStyleSheet("font-family: Consolas; font-size: 14px; letter-spacing: 1px;")
             lay.addWidget(box)
             b = QPushButton("Ya lo guardé, entrar" if first_time else "Cerrar")

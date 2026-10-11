@@ -94,6 +94,24 @@ class _SessionLockFilter:
         except Exception:
             return False
 
+    def stop(self) -> None:
+        """Desregistra el filtro (llamar en closeEvent: salida limpia)."""
+        try:
+            from PySide6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app is not None and self._filter is not None:
+                app.removeNativeEventFilter(self._filter)
+        except (RuntimeError, Exception):
+            pass
+        try:
+            import ctypes
+            hwnd = int(self._window.winId())
+            ctypes.windll.wtsapi32.WTSUnRegisterSessionNotification(hwnd)
+        except (RuntimeError, Exception):
+            pass
+        self._filter = None
+        self._registered = False
+
 
 def watch_session_lock(window, on_lock) -> bool:
     try:

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtCore import QEasingCurve, QParallelAnimationGroup, QPropertyAnimation, Qt
 from PySide6.QtWidgets import QGraphicsOpacityEffect, QWidget
 
 _reduced = os.environ.get("REDUCED_MOTION") == "1"
@@ -115,5 +115,32 @@ def press_scale(w: QWidget) -> None:
         a.setEndValue(1.0)
         a.finished.connect(lambda: _cleanup(w))
         a.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+    except RuntimeError:
+        pass
+
+
+def collapse_width(w: QWidget, target: int, ms: int = 220) -> None:
+    """Colapsa/expande el ancho con transicion suave (sidebar)."""
+    try:
+        w.setMinimumWidth(min(w.minimumWidth(), target))
+        w.setMaximumWidth(max(w.maximumWidth(), target))
+    except RuntimeError:
+        return
+    if not enabled() or not _alive(w):
+        try:
+            w.setFixedWidth(target)
+        except RuntimeError:
+            pass
+        return
+    try:
+        g = QParallelAnimationGroup(w)
+        for prop in (b"minimumWidth", b"maximumWidth"):
+            a = QPropertyAnimation(w, prop, w)
+            a.setDuration(ms)
+            a.setStartValue(getattr(w, prop.decode())())
+            a.setEndValue(target)
+            a.setEasingCurve(QEasingCurve.InOutCubic)
+            g.addAnimation(a)
+        g.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
     except RuntimeError:
         pass

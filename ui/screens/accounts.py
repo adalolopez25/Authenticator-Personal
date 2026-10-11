@@ -1,10 +1,10 @@
-"""Vista principal compacta: columna unica, codigo grande + countdown + clic-para-copiar."""
+"""Vista de cuentas: columna unica reutilizable (escritorio y futuro Android)."""
 from __future__ import annotations
 
 import base64
 import time
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
@@ -74,31 +74,29 @@ class AccountRow(QWidget):
 
 
 class AccountsScreen(QWidget):
+    counts_changed = Signal(int, int)  # (activas, papelera) para el badge del sidebar
+
     def __init__(self, window):
         super().__init__()
         self.w = window
         self.trash_mode = False
         self.cache: dict[str, dict] = {}  # acc_id -> {issuer,label,secret,digits,period,algo}
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(12, 10, 12, 10)
-        lay.setSpacing(8)
+        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setSpacing(10)
+        # Titulo de seccion (lo fija el sidebar: Cuentas / Papelera)
+        self.lbl_title = QLabel("Cuentas")
+        self.lbl_title.setStyleSheet("font-size: 20px; font-weight: 700;")
+        lay.addWidget(self.lbl_title)
         # Buscador
         self.search = QLineEdit()
         self.search.setObjectName("search")
         self.search.setPlaceholderText("Buscar cuenta…")
         self.search.textChanged.connect(lambda: self.reload(keep_codes=True))
         lay.addWidget(self.search)
-        # Barra papelera + conteo
-        mid = QHBoxLayout()
         self.lbl_count = QLabel("")
         self.lbl_count.setObjectName("muted")
-        mid.addWidget(self.lbl_count, 1)
-        self.b_trash = QPushButton("Papelera")
-        self.b_trash.setObjectName("ghost")
-        self.b_trash.setCheckable(True)
-        self.b_trash.clicked.connect(self._toggle_trash)
-        mid.addWidget(self.b_trash)
-        lay.addLayout(mid)
+        lay.addWidget(self.lbl_count)
         # Lista scrolleable
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
@@ -161,10 +159,22 @@ class AccountsScreen(QWidget):
             row.setProperty("acc", acc_id)
             self.vbox.insertWidget(self.vbox.count() - 1, row)
         a, b = store.count_accounts()
-        self.lbl_count.setText(f"{b} en papelera" if self.trash_mode else f"{a} cuentas")
+        self.lbl_count.setText(f"{b} en papelera · se purgan a los 30 días" if self.trash_mode
+                               else f"{a} cuentas · clic en una fila para copiar")
+        try:
+            self.counts_changed.emit(a, b)
+        except RuntimeError:
+            pass
         if not keep_codes:
             anim.stagger([self.vbox.itemAt(i).widget() for i in range(self.vbox.count() - 1)
                           if self.vbox.itemAt(i).widget()])
+
+    def set_trash_mode(self, trash: bool):
+        """Cambia Cuentas <-> Papelera (lo ordena el sidebar)."""
+        self.trash_mode = trash
+        self.lbl_title.setText("Papelera" if trash else "Cuentas")
+        self.search.clear()
+        self.reload()
 
     def _tick(self):
         if self.w.key is None or not self.isVisible():
@@ -224,11 +234,6 @@ class AccountsScreen(QWidget):
             m.exec(btn.mapToGlobal(btn.rect().bottomLeft()))
         except Exception:
             pass
-
-    def _toggle_trash(self):
-        self.trash_mode = self.b_trash.isChecked()
-        self.b_trash.setText("Volver" if self.trash_mode else "Papelera")
-        self.reload()
 
     def _soft_delete(self, acc_id: str):
         store.delete_account(acc_id)

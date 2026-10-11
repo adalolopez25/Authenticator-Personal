@@ -35,13 +35,14 @@ app/
   utils.py              # clipboard auto-clear
   version.py            # APP_VERSION única fuente
 ui/
-  main_window.py        # ventana COMPACTA vertical (auth 420x640, app 380x620)
-  screens/accounts.py   # columna única: buscador + filas densas + añadir
+  main_window.py        # shell escritorio 1280x800 (auth centrado 520x780). Sidebar + stack con fade.
+  screens/accounts.py   # columna unica reutilizable (escritorio y futuro Android) + papelera (badge en sidebar)
   screens/add.py        # alta manual/URI + validación (código esperado)
-  screens/prefs.py      # preferencias mínimas (diálogo, no sidebar)
+  screens/prefs.py      # preferencias en 6 secciones con sub-nav (no sidebar lateral de app)
   screens/welcome.py    # crear bóveda (master 12+ / 3 de 4 clases)
   screens/unlock.py     # desbloqueo + backoff 5 intentos
   screens/recovery.py   # kit: mostrar (una vez), usar, rotar
+  widgets/sidebar.py    # nav colapsable (Cuentas/Añadir/Papelera/Preferencias) + badge + versión
   widgets/icons.py      # 12 iconos SVG línea inline. Cero emojis.
   widgets/toasts.py     # slide + auto-dismiss 3s
   widgets/modal.py      # ModalHost: dim a mano + fade/slide
@@ -76,7 +77,12 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 5. NUNCA "recuperación por correo/teléfono": solo kit offline.
 6. Export solo cifrado. Import tritura el origen. Sin export plaintext en MVP.
 
-## 5. UI — ventana compacta vertical (restricción de diseño, §11 del plan)
+## 5. UI — escritorio amplio con sidebar (releva §11 del plan original a petición del usuario)
+
+* Windows: ventana **1280×800** (mín 1024×680) con **sidebar colapsable** (`#2A2138`): Cuentas, Añadir cuenta,
+  Papelera (badge con conteo), Preferencias + Bloquear + versión. Auth (welcome/unlock/kit) sigue centrado sin sidebar.
+* Contenido: páginas con **fade al navegar**; sidebar con **`collapse_width`** (248↔68, 220ms).
+* Android futuro: mismas pantallas en columna única sin sidebar (las pantallas no asumen el sidebar).
 
 * NADA de 3 columnas: **una sola columna**, ~380×620 (auth ~420×640), redimensionable pero pensada en pequeño.
 * De arriba a abajo: topbar mínima (título + candado-lock + engranaje) → buscador → lista scrolleable → barra "+ Añadir".
@@ -158,3 +164,17 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 13. (2026-10-11) **Ventana 380×620 demasiado pequeña.**
     Solución: app 900×940 / auth 500×760 (mínimo 380×600) + columna de contenido max 640 centrada:
     en escritorio respira a los lados, en el futuro Android ocupa todo el ancho. Sin sidebars (restricción §11 intacta).
+    NOTA POSTERIOR: el usuario pidió app grande con sidebar para Windows — ver §16 (releva §11 solo en escritorio).
+14. (2026-10-11) **TypeError `TextInteractionFlag | int` al abrir Añadir/Kit.**
+    Causa: flags crudos (`0x02 | 0x10`) mezclados con enums PySide6. Solución: `Qt.TextSelectableByMouse |
+    Qt.TextSelectableByKeyboard` en `add.py`/`recovery.py`. Lo cazó el smoke de navegación (no había test que abriera esas pantallas).
+15. (2026-10-11) **Crash al salir `-1073740791` en smoke con hilo de update vivo.**
+    Causa: el QThread de chequeo competía con el teardown del intérprete. Solución: `stop()` del filtro
+    nativo + `WTSUnRegister` + `_update_thread.wait(3000)` en `closeEvent`. Verificación: smoke con `w.close()` → `EXIT_CLEAN`, RC=0.
+    OJO al testear animaciones offscreen: bombear el loop progresivamente (N×sleep+processEvents); un solo
+    sleep+processEvents NO avanza QPropertyAnimation y finge que el colapso falla.
+16. (2026-10-11) **Rediseño escritorio: sidebar + preferencias por secciones (§5/§11 actualizados).**
+    Windows = ventana 1280×800 con sidebar colapsable (Cuentas/Añadir/Papelera+badge/Preferencias) y prefs en
+    6 secciones (General/Seguridad/Clave/Recuperación y copias/Actualizaciones/Peligro). Android futuro = mismas
+    pantallas en columna sin sidebar. Transiciones fade al navegar + `collapse_width` (QParallelAnimationGroup
+    sobre min/maxWidth) para el sidebar.

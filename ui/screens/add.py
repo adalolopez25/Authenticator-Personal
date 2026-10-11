@@ -1,6 +1,7 @@
 """Alta compacta: secreto base32 o URI otpauth:// + validacion con codigo esperado."""
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QFormLayout, QLabel, QLineEdit,
                                QMessageBox, QPushButton, QSpinBox, QVBoxLayout,
                                QWidget)
@@ -47,7 +48,7 @@ class AddScreen(QWidget):
         # Checksum visual: primer codigo esperado (valida sin guardar nada)
         self.lbl_prev = QLabel("Vista previa: —")
         self.lbl_prev.setObjectName("muted")
-        self.lbl_prev.setTextInteractionFlags(self.lbl_prev.textInteractionFlags() | 0x02)
+        self.lbl_prev.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
         lay.addWidget(self.lbl_prev)
         hint = QLabel("Sin cámara en MVP: pega el secreto o la URI que da el proveedor.")
         hint.setObjectName("muted")

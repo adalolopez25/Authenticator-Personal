@@ -132,3 +132,53 @@ QToolTip {
   border: 1px solid #7A63D6;
   padding: 4px 8px;
 }
+/* Sidebar escritorio */
+QLabel#brand {
+  color: #FFFFFF;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+QPushButton#sideBtn {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 10px 12px;
+  color: #A9A9B0;
+  font-size: 14px;
+  text-align: left;
+}
+QPushButton#sideBtn:hover {
+  background-color: #33264D;
+  color: #FFFFFF;
+  border: 1px solid transparent;
+}
+QPushButton#sideBtn:checked {
+  background-color: #3A2F5E;
+  border: 1px solid #7A63D6;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+QLabel#badge {
+  background-color: #7A63D6;
+  color: #FFFFFF;
+  border-radius: 9px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+/* Sub-nav de Preferencias */
+QListWidget#prefNav {
+  background-color: #2A2138;
+  border: 1px solid #3A3A3C;
+  border-radius: 12px;
+  padding: 6px;
+  outline: none;
+}
+QListWidget#prefNav::item {
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #A9A9B0;
+}
+QListWidget#prefNav::item:hover { background-color: #33264D; color: #FFFFFF; }
+QListWidget#prefNav::item:selected { background-color: #3A2F5E; color: #FFFFFF; font-weight: 600; }
