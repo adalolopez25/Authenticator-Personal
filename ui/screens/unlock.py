@@ -1,11 +1,13 @@
 """Pantalla auth: desbloqueo con backoff 5 intentos."""
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QVBoxLayout, QWidget)
 
 from app import auth
 from ui.styles import animations as anim
+from ui.widgets.icons import icon
 
 
 class UnlockScreen(QWidget):
@@ -17,9 +19,11 @@ class UnlockScreen(QWidget):
         lay.setSpacing(10)
         title = QLabel("Desbloquear")
         title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        title.setAlignment(Qt.AlignCenter)
         lay.addWidget(title)
         self.info = QLabel("")
         self.info.setObjectName("muted")
+        self.info.setAlignment(Qt.AlignCenter)
         lay.addWidget(self.info)
         self.pw = QLineEdit()
         self.pw.setEchoMode(QLineEdit.Password)
@@ -28,14 +32,20 @@ class UnlockScreen(QWidget):
         lay.addWidget(self.pw)
         btn = QPushButton("Desbloquear")
         btn.setObjectName("primary")
+        btn.setIcon(icon("lock"))
+        btn.setToolTip("Abre la bóveda con tu clave maestra")
         btn.clicked.connect(self._unlock)
         lay.addWidget(btn)
         row = QHBoxLayout()
-        self.b_kit = QPushButton("Olvidé la clave (kit)")
+        self.b_kit = QPushButton("Olvidé la clave")
         self.b_kit.setObjectName("ghost")
+        self.b_kit.setIcon(icon("key"))
+        self.b_kit.setToolTip("Recupera el acceso con tu kit offline")
         self.b_kit.clicked.connect(lambda: self.w.show_recover())
         self.b_wipe = QPushButton("Borrar todo")
         self.b_wipe.setObjectName("danger")
+        self.b_wipe.setIcon(icon("trash"))
+        self.b_wipe.setToolTip("Borra definitivamente toda la bóveda")
         self.b_wipe.clicked.connect(self._wipe)
         row.addWidget(self.b_kit, 1)
         row.addWidget(self.b_wipe, 1)
@@ -47,9 +57,9 @@ class UnlockScreen(QWidget):
     def refresh(self):
         left = auth.attempts_left()
         d = auth.backoff_delay()
-        msg = f"Intentos restantes: {left}." if left < 5 else ""
+        msg = f"{left} intentos restantes." if left < 5 else ""
         if d > 0:
-            msg += f" Espera {int(d)}s antes de intentar."
+            msg += f" Espera {int(d)}s."
         self.info.setText(msg)
 
     def _unlock(self):
@@ -69,8 +79,7 @@ class UnlockScreen(QWidget):
         from app import store, vault
         from ui.widgets.toasts import show_toast
         r = QMessageBox.question(self, "Borrar todo",
-                                 "Borra TODA la bóveda. Escribe la clave actual en Desbloquear "
-                                 "antes, o usa el kit. ¿Continuar al borrado total?")
+                                 "Borra TODA la bóveda de forma definitiva. ¿Continuar?")
         if r != QMessageBox.Yes:
             return
         pw, ok = _ask_password(self)
@@ -95,7 +104,7 @@ def _ask_password(parent):
     edit = QLineEdit()
     edit.setEchoMode(QLineEdit.Password)
     edit.setPlaceholderText("Clave actual")
-    lay.addWidget(QLabel("Escribe tu clave actual para borrar todo:"))
+    lay.addWidget(QLabel("Clave actual:"))
     lay.addWidget(edit)
     bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
     bb.accepted.connect(d.accept)

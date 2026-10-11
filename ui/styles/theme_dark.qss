@@ -166,7 +166,25 @@ QLabel#authIcon {
   border: 1px solid #7A63D6;
   border-radius: 32px;
 }
-QCheckBox { color: #FFFFFF; spacing: 8px; background-color: transparent; }
+/* Checkboxes estilizados (nada de cuadros Fusion por defecto). */
+QCheckBox { color: #FFFFFF; spacing: 10px; background-color: transparent; font-size: 14px; }
+QCheckBox::indicator { width: 18px; height: 18px; border-radius: 6px;
+  border: 1px solid #4A4A52; background-color: #2C2C2E; }
+QCheckBox::indicator:hover { border: 1px solid #7A63D6; }
+QCheckBox::indicator:checked { background-color: #7A63D6; border: 1px solid #7A63D6; }
+QCheckBox::indicator:disabled { background-color: #3A3A3C; border: 1px solid #3A3A3C; }
+/* InfoBox: aviso con acento lateral por tono. */
+QWidget#infoBox { background-color: #2C2C2E; border: 1px solid #3A3A3C;
+  border-left: 3px solid #7A63D6; border-radius: 10px; }
+QWidget#infoBox[tone="warn"] { border-left: 3px solid #FFD60A; }
+QWidget#infoBox[tone="danger"] { border-left: 3px solid #FF6B6B; }
+QWidget#infoBox[tone="ok"] { border-left: 3px solid #30D158; }
+QWidget#infoBox QLabel { background-color: transparent; }
+/* Stat tiles (Preferencias > General). */
+QWidget#statTile { background-color: #2C2C2E; border: 1px solid #3A3A3C; border-radius: 12px; }
+QLabel#statNum { font-size: 26px; font-weight: 700; color: #FFFFFF; background-color: transparent; }
+QPushButton:focus { outline: none; border: 2px solid #1A7CFF; }
+QPushButton#sideBtn:focus, QPushButton#toolBtn:focus, QPushButton#iconBtn:focus { border: 1px solid #7A63D6; }
 QMenu {
   background-color: #2C2C2E;
   border: 1px solid #3A3A3C;

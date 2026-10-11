@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+from PySide6.QtWidgets import (QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QVBoxLayout,
                                QWidget)
 
@@ -139,8 +139,8 @@ class EmptyState(QWidget):
         t.setStyleSheet("font-size: 17px; font-weight: 700;")
         t.setAlignment(Qt.AlignCenter)
         lay.addWidget(t)
-        s = QLabel("Los elementos eliminados esperan aquí 30 días." if trash
-                   else "Añade tu primera cuenta con el secreto o la URI del proveedor.")
+        s = QLabel("Se eliminan solas con el tiempo." if trash
+                   else "Añade tu primera cuenta para empezar.")
         s.setObjectName("muted")
         s.setWordWrap(True)
         s.setAlignment(Qt.AlignCenter)
@@ -160,6 +160,7 @@ class AccountsScreen(QWidget):
         super().__init__()
         self.w = window
         self.trash_mode = False
+        self._cols = 0
         self.cache: dict[str, dict] = {}
         lay = QVBoxLayout(self)
         lay.setContentsMargins(24, 20, 24, 20)
@@ -203,17 +204,19 @@ class AccountsScreen(QWidget):
         self.scroll.setWidgetResizable(True)
         self.scroll.setFrameShape(QScrollArea.NoFrame)
         self.inner = QWidget()
-        self.vbox = QVBoxLayout(self.inner)
-        self.vbox.setContentsMargins(0, 2, 0, 2)
-        self.vbox.setSpacing(10)
-        self.vbox.addStretch(1)
+        self.grid = QGridLayout(self.inner)
+        self.grid.setContentsMargins(0, 2, 0, 2)
+        self.grid.setSpacing(10)
         self.scroll.setWidget(self.inner)
         lay.addWidget(self.scroll, 1)
-        # Footer
-        self.lbl_foot = QLabel("")
-        self.lbl_foot.setObjectName("muted")
-        self.lbl_foot.setAlignment(Qt.AlignCenter)
-        lay.addWidget(self.lbl_foot)
+        # Footer: solo papelera (vaciar)
+        self.b_empty = QPushButton("Vaciar papelera")
+        self.b_empty.setObjectName("danger")
+        self.b_empty.setIcon(icon("trash"))
+        self.b_empty.setToolTip("Elimina definitivamente todo lo de la papelera")
+        self.b_empty.clicked.connect(self._empty_trash)
+        self.b_empty.setVisible(False)
+        lay.addWidget(self.b_empty, 0, Qt.AlignRight)
         # Refresco por QTimer (1s): recalcula codigos + countdown
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
@@ -245,14 +248,18 @@ class AccountsScreen(QWidget):
         else:
             ids = list(self.cache.keys())
         # Limpia filas (y posible estado vacio anterior)
-        while self.vbox.count() > 1:
-            item = self.vbox.takeAt(0)
+        while self.grid.count():
+            item = self.grid.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
+        cols = max(1, self._cols_for_width())
+        self._cols = cols
+        for c in range(cols):
+            self.grid.setColumnStretch(c, 1)
         if not ids:
             empty = EmptyState(trash=self.trash_mode, on_add=lambda: self.w.show_add())
-            self.vbox.insertWidget(self.vbox.count() - 1, empty)
-        for acc_id in ids:
+            self.grid.addWidget(empty, 0, 0, 1, cols)
+        for n, acc_id in enumerate(ids):
             d = self.cache[acc_id]
             code = totp.generate(d["secret"], digits=d["digits"],
                                  period=d["period"], algo=d["algo"])
@@ -260,18 +267,26 @@ class AccountsScreen(QWidget):
             row = AccountRow(self, acc_id, d["issuer"], d["label"], code,
                              remain, d["period"], self.trash_mode)
             row.setProperty("acc", acc_id)
-            self.vbox.insertWidget(self.vbox.count() - 1, row)
+            self.grid.addWidget(row, n // cols, n % cols)
+        self.grid.setRowStretch((len(ids) + cols - 1) // cols + 1, 1)
         a, b = store.count_accounts()
-        self.lbl_count.setText(f"{b} en papelera · purga a los 30 días" if self.trash_mode
-                               else f"{a} cuentas protegidas con AES-256-GCM")
-        self.lbl_foot.setText("Clic en una fila o en Copiar para copiar · se auto-limpia" if ids else "")
+        self.lbl_count.setText(f"{b} en papelera" if self.trash_mode else f"{a} cuentas")
+        self.b_empty.setVisible(self.trash_mode and b > 0)
         try:
             self.counts_changed.emit(a, b)
         except RuntimeError:
             pass
         if not keep_codes:
-            anim.stagger([self.vbox.itemAt(i).widget() for i in range(self.vbox.count() - 1)
-                          if self.vbox.itemAt(i).widget()])
+            anim.stagger([w for w in self._iter_rows()])
+
+    def _iter_rows(self):
+        for i in range(self.grid.count()):
+            try:
+                w = self.grid.itemAt(i).widget()
+            except RuntimeError:
+                continue
+            if isinstance(w, AccountRow):
+                yield w
 
     def set_trash_mode(self, trash: bool):
         """Cambia Cuentas <-> Papelera (lo ordena el sidebar)."""
@@ -281,16 +296,37 @@ class AccountsScreen(QWidget):
         self.b_add_top.setVisible(not trash)
         self.reload()
 
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        try:
+            if self._cols_for_width() != self._cols and self.w.key is not None:
+                self.reload(keep_codes=True)
+        except RuntimeError:
+            pass
+
+    def _cols_for_width(self) -> int:
+        try:
+            return 2 if self.width() >= 760 else 1
+        except RuntimeError:
+            return 1
+
+    def _empty_trash(self):
+        rows = store.list_accounts_meta(deleted_only=True)
+        if not rows:
+            return
+        r = QMessageBox.question(self, "Vaciar papelera",
+                                 f"Elimina definitivamente {len(rows)} elemento(s). ¿Continuar?")
+        if r != QMessageBox.Yes:
+            return
+        for it in rows:
+            store.hard_delete_account(it["id"])
+        show_toast(self.w, "Papelera vaciada")
+        self.reload(keep_codes=True)
+
     def _tick(self):
         if self.w.key is None or not self.isVisible():
             return
-        for i in range(self.vbox.count() - 1):
-            try:
-                row = self.vbox.itemAt(i).widget()
-            except RuntimeError:
-                continue
-            if not isinstance(row, AccountRow):
-                continue
+        for row in self._iter_rows():
             d = self.cache.get(row.acc_id)
             if not d:
                 continue

@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (QLabel, QLineEdit, QMessageBox, QPushButton,
                                QVBoxLayout, QWidget)
 
 from app import auth
+from ui.widgets.icons import icon
+from ui.widgets.info import InfoBox
 from ui.widgets.toasts import show_toast
 
 
@@ -22,13 +24,12 @@ class KitScreen(QWidget):
         lay.setSpacing(10)
         if recover_mode:
             title = QLabel("Recuperar con kit")
+            title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setAlignment(Qt.AlignCenter)
             lay.addWidget(title)
-            info = QLabel("Pega tu kit offline y fija una clave nueva. Se emitirá un kit fresco.")
-            info.setObjectName("muted")
-            info.setWordWrap(True)
-            lay.addWidget(info)
             self.kit = QLineEdit()
             self.kit.setPlaceholderText("Código del kit (grupos de 5)")
+            self.kit.setToolTip("El código que guardaste en papel")
             self.n1 = QLineEdit()
             self.n1.setEchoMode(QLineEdit.Password)
             self.n1.setPlaceholderText("Nueva clave maestra")
@@ -39,17 +40,16 @@ class KitScreen(QWidget):
                 lay.addWidget(e)
             b = QPushButton("Recuperar y entrar")
             b.setObjectName("primary")
+            b.setIcon(icon("check"))
+            b.setToolTip("Recupera el acceso y fija la clave nueva")
             b.clicked.connect(self._recover)
             lay.addWidget(b)
         else:
             title = QLabel("Kit de recuperación")
             title.setStyleSheet("font-size: 20px; font-weight: 700;")
+            title.setAlignment(Qt.AlignCenter)
             lay.addWidget(title)
-            info = QLabel("Guárdalo en papel, fuera del PC. Se muestra UNA sola vez. "
-                          "Sin él, perder el PC = perder el 2FA.")
-            info.setObjectName("muted")
-            info.setWordWrap(True)
-            lay.addWidget(info)
+            lay.addWidget(InfoBox("Guárdalo en papel ahora: solo se muestra esta vez.", tone="warn"))
             box = QLabel(code or "")
             box.setWordWrap(True)
             box.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
@@ -57,12 +57,14 @@ class KitScreen(QWidget):
             lay.addWidget(box)
             b = QPushButton("Ya lo guardé, entrar" if first_time else "Cerrar")
             b.setObjectName("primary")
+            b.setIcon(icon("check"))
             b.clicked.connect(self.w.show_accounts)
             lay.addWidget(b)
             if not first_time:
-                lay.addWidget(QLabel("Rotar el kit invalida el anterior."))
-                r = QPushButton("Rotar kit (pide clave)")
+                r = QPushButton("Rotar kit")
                 r.setObjectName("ghost")
+                r.setIcon(icon("refresh"))
+                r.setToolTip("Crea un kit nuevo e invalida este")
                 r.clicked.connect(self._rotate)
                 lay.addWidget(r)
         lay.addStretch(1)

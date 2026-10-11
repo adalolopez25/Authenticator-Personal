@@ -1,18 +1,42 @@
-"""Preferencias completas: sub-nav + 6 secciones funcionales con transiciones."""
+"""Preferencias: modal con sub-nav + 6 secciones. Solo microcopy de accion."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QHBoxLayout,
                                QLabel, QLineEdit, QListWidget, QMessageBox, QPushButton,
-                               QScrollArea, QStackedWidget, QVBoxLayout, QWidget)
+                               QScrollArea, QStackedWidget, QVBoxLayout,
+                               QWidget)
 
 from app import auth, settings, store, vault
 from app.version import APP_VERSION
 from ui.styles import animations as anim
+from ui.widgets.info import InfoBox
 from ui.widgets.toasts import show_toast
+
+
+def _section(ic: str, title: str) -> tuple[QWidget, QVBoxLayout]:
+    """Tarjeta de seccion con header (icono + titulo)."""
+    from ui.widgets.icons import icon as _icon
+    card = QWidget()
+    card.setObjectName("card")
+    lay = QVBoxLayout(card)
+    lay.setContentsMargins(18, 14, 18, 16)
+    lay.setSpacing(10)
+    head = QHBoxLayout()
+    head.setContentsMargins(0, 0, 0, 0)
+    head.setSpacing(10)
+    art = QLabel()
+    art.setPixmap(_icon(ic).pixmap(22, 22))
+    art.setFixedSize(24, 24)
+    head.addWidget(art)
+    t = QLabel(title)
+    t.setStyleSheet("font-size: 16px; font-weight: 700;")
+    head.addWidget(t, 1)
+    lay.addLayout(head)
+    return card, lay
 
 
 class PrefsScreen(QWidget):
@@ -23,12 +47,10 @@ class PrefsScreen(QWidget):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(16, 14, 16, 14)
         lay.setSpacing(12)
-        # Sub-nav
         self.nav = QListWidget()
         self.nav.setObjectName("prefNav")
         self.nav.setFixedWidth(196)
         self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.nav.setWordWrap(False)
         self.nav.addItems(["General", "Seguridad", "Clave maestra",
                            "Recuperación y copias", "Actualizaciones", "Peligro"])
         try:
@@ -43,14 +65,8 @@ class PrefsScreen(QWidget):
         lay.addWidget(self.nav)
         self.pages = QStackedWidget()
         lay.addWidget(self.pages, 1)
-        self._sec_general = self._build_general()
-        self._sec_seguridad = self._build_seguridad()
-        self._sec_clave = self._build_clave()
-        self._sec_copias = self._build_copias()
-        self._sec_updates = self._build_updates()
-        self._sec_peligro = self._build_peligro()
-        for s in (self._sec_general, self._sec_seguridad, self._sec_clave,
-                  self._sec_copias, self._sec_updates, self._sec_peligro):
+        for s in (self._build_general(), self._build_seguridad(), self._build_clave(),
+                  self._build_copias(), self._build_updates(), self._build_peligro()):
             self.pages.addWidget(s)
         self.nav.currentRowChanged.connect(self._goto)
         self.refresh_stats()
@@ -59,7 +75,6 @@ class PrefsScreen(QWidget):
         self.pages.setCurrentIndex(i)
         anim.fade_in(self.pages.currentWidget(), 180)
 
-    # ---------- envoltorio con scroll ----------
     @staticmethod
     def _wrap(inner: QWidget) -> QWidget:
         sc = QScrollArea()
@@ -78,14 +93,12 @@ class PrefsScreen(QWidget):
         pl.addWidget(sc)
         return page
 
-    @staticmethod
-    def _card() -> tuple[QWidget, QVBoxLayout]:
-        c = QWidget()
-        c.setObjectName("card")
-        lay = QVBoxLayout(c)
-        lay.setContentsMargins(16, 14, 16, 14)
-        lay.setSpacing(8)
-        return c, lay
+    def _close_host(self):
+        try:
+            if self._host is not None:
+                self._host.accept()
+        except (RuntimeError, Exception):
+            pass
 
     # ---------- General ----------
     def _build_general(self) -> QWidget:
@@ -93,61 +106,87 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("General"))
-        stats, sl = self._card()
-        self.lbl_stats = QLabel("…")
-        self.lbl_stats.setObjectName("muted")
-        self.lbl_stats.setWordWrap(True)
-        sl.addWidget(QLabel("Tu bóveda de un vistazo:"))
-        sl.addWidget(self.lbl_stats)
-        lay.addWidget(stats)
-        blk, bl = self._card()
-        bl.addWidget(_h("Bloqueo automático"))
+        stats = QHBoxLayout()
+        stats.setContentsMargins(0, 0, 0, 0)
+        stats.setSpacing(10)
+        self.tile_a = self._stat_tile()
+        self.tile_b = self._stat_tile()
+        stats.addWidget(self.tile_a, 1)
+        stats.addWidget(self.tile_b, 1)
+        lay.addLayout(stats)
+        c, cl = _section("clock", "Bloqueo automático")
         row = QHBoxLayout()
+        row.addWidget(QLabel("Bloquear tras (min):"))
         self.c_lock = QComboBox()
         self.c_lock.addItems(["1", "3", "5", "10"])
         self.c_lock.setCurrentText(str(settings.get_autolock_min()))
+        self.c_lock.setToolTip("Minutos de inactividad antes de bloquear")
         self.c_lock.currentTextChanged.connect(lambda t: settings.set_autolock_min(int(t)))
-        row.addWidget(QLabel("Bloquear tras (min):"))
         row.addWidget(self.c_lock, 1)
-        bl.addLayout(row)
+        cl.addLayout(row)
         self.chk_min = QCheckBox("Bloquear al minimizar")
         self.chk_min.setChecked(settings.get_lock_on_minimize())
+        self.chk_min.setToolTip("Bloquea también al minimizar la ventana")
         self.chk_min.toggled.connect(settings.set_lock_on_minimize)
-        bl.addWidget(self.chk_min)
+        cl.addWidget(self.chk_min)
         b_lock = QPushButton("Bloquear ahora")
         b_lock.setObjectName("ghost")
+        b_lock.setIcon(self._ic("lock"))
+        b_lock.setToolTip("Bloquea la app inmediatamente")
         b_lock.clicked.connect(lambda: self.w.lock())
-        bl.addWidget(b_lock)
-        lay.addWidget(blk)
-        clip, cl = self._card()
-        cl.addWidget(_h("Portapapeles"))
+        cl.addWidget(b_lock)
+        lay.addWidget(c)
+        k, kl = _section("copy", "Portapapeles")
         row2 = QHBoxLayout()
+        row2.addWidget(QLabel("Auto-limpieza (s):"))
         self.c_clip = QComboBox()
         self.c_clip.addItems(["10", "15", "30", "60"])
         self.c_clip.setCurrentText(str(settings.get_clipboard_sec()))
+        self.c_clip.setToolTip("Segundos antes de borrar lo copiado")
         self.c_clip.currentTextChanged.connect(lambda t: settings.set_clipboard_sec(int(t)))
-        row2.addWidget(QLabel("Auto-limpieza (s):"))
         row2.addWidget(self.c_clip, 1)
-        cl.addLayout(row2)
-        cl.addWidget(_muted("Solo se copia el código de 6–8 dígitos; la semilla jamás sale de la bóveda."))
-        lay.addWidget(clip)
-        app_, al = self._card()
-        al.addWidget(_h("Apariencia"))
+        kl.addLayout(row2)
+        lay.addWidget(k)
+        a, al = _section("sliders", "Apariencia")
         self.chk_motion = QCheckBox("Reducir animaciones")
         self.chk_motion.setChecked(settings.get_reduced_motion())
+        self.chk_motion.setToolTip("Desactiva transiciones y efectos")
         self.chk_motion.toggled.connect(self._motion)
         al.addWidget(self.chk_motion)
-        lay.addWidget(app_)
+        lay.addWidget(a)
         return self._wrap(box)
+
+    @staticmethod
+    def _ic(name: str):
+        from ui.widgets.icons import icon as _icon
+        return _icon(name)
+
+    @staticmethod
+    def _stat_tile() -> QWidget:
+        t = QWidget()
+        t.setObjectName("statTile")
+        lay = QVBoxLayout(t)
+        lay.setContentsMargins(16, 12, 16, 12)
+        lay.setSpacing(2)
+        num = QLabel("–")
+        num.setObjectName("statNum")
+        lay.addWidget(num)
+        lab = QLabel("")
+        lab.setObjectName("muted")
+        lay.addWidget(lab)
+        t.setProperty("num", num)
+        t.setProperty("lab", lab)
+        return t
 
     def refresh_stats(self):
         try:
             a, b = store.count_accounts()
-            self.lbl_stats.setText(f"{a} cuentas activas · {b} en papelera")
+            for tile, n, lab in ((self.tile_a, a, "Cuentas"), (self.tile_b, b, "En papelera")):
+                tile.property("num").setText(str(n))
+                tile.property("lab").setText(lab)
             if getattr(self.w, "sidebar", None) is not None:
                 self.w.sidebar.set_trash_count(b)
-        except Exception:
+        except (RuntimeError, Exception):
             pass
 
     def _motion(self, v: bool):
@@ -160,24 +199,23 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("Seguridad"))
-        c, cl = self._card()
-        cl.addWidget(_muted("KDF Argon2id (t=3, 64 MiB, p=4) · AES-256-GCM · backoff tras 5 intentos "
-                            "(5s, 15s, 30s, 60s) · permisos 0600/0700 · cero red salvo chequeo de versión opt-in."))
-        cl.addWidget(_muted(self._session_status()))
+        c, cl = _section("shield", "Integridad de la bóveda")
+        self.lbl_integrity = QLabel("Sin verificar en esta sesión")
+        self.lbl_integrity.setObjectName("muted")
+        cl.addWidget(self.lbl_integrity)
         b_verify = QPushButton("Verificar integridad")
         b_verify.setObjectName("ghost")
+        b_verify.setIcon(self._ic("check"))
+        b_verify.setToolTip("Comprueba que todos los registros descifran bien")
         b_verify.clicked.connect(self._verify)
         cl.addWidget(b_verify)
         lay.addWidget(c)
+        import sys as _sys
+        if _sys.platform == "win32":
+            lay.addWidget(InfoBox("El bloqueo con Win+L está activo en este equipo.", tone="ok"))
+        else:
+            lay.addWidget(InfoBox("Sigue activo el bloqueo por inactividad.", tone="info"))
         return self._wrap(box)
-
-    @staticmethod
-    def _session_status() -> str:
-        import sys
-        if sys.platform == "win32":
-            return "Bloqueo con Win+L / suspensión: activo (se bloquea al bloquear la sesión)."
-        return "Bloqueo con Win+L: no disponible fuera de Windows (sigue activo el autobloqueo por tiempo)."
 
     def _verify(self):
         key = self.w.key
@@ -188,8 +226,10 @@ class PrefsScreen(QWidget):
                 for f in ("issuer_blob", "label_blob", "secret_blob"):
                     if r.get(f):
                         vault.decrypt(key, r[f])
+            self.lbl_integrity.setText("Verificada correctamente")
             show_toast(self.w, "Integridad OK")
         except ValueError:
+            self.lbl_integrity.setText("Fallo: hay registros ilegibles")
             QMessageBox.warning(self, "Integridad", "Hay registros corruptos o ilegibles.")
 
     # ---------- Clave maestra ----------
@@ -198,10 +238,7 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("Clave maestra"))
-        c, cl = self._card()
-        cl.addWidget(_muted("Cambiar la clave re-cifra TODAS las cuentas en una transacción atómica. "
-                            "El kit anterior queda invalidado: crea uno nuevo después."))
+        c, cl = _section("key", "Cambiar clave maestra")
         self.e_cur = QLineEdit()
         self.e_cur.setEchoMode(QLineEdit.Password)
         self.e_cur.setPlaceholderText("Clave actual")
@@ -215,9 +252,12 @@ class PrefsScreen(QWidget):
             cl.addWidget(e)
         b_ch = QPushButton("Cambiar clave y re-cifrar todo")
         b_ch.setObjectName("primary")
+        b_ch.setIcon(self._ic("check"))
+        b_ch.setToolTip("Re-cifra todas las cuentas con la clave nueva")
         b_ch.clicked.connect(self._change)
         cl.addWidget(b_ch)
         lay.addWidget(c)
+        lay.addWidget(InfoBox("El kit anterior deja de funcionar: crea uno nuevo después.", tone="warn"))
         return self._wrap(box)
 
     def _change(self):
@@ -232,7 +272,7 @@ class PrefsScreen(QWidget):
         self.w.key = new_key
         for e in (self.e_cur, self.e_new1, self.e_new2):
             e.clear()
-        show_toast(self.w, "Clave cambiada. Crea un kit nuevo en Recuperación.")
+        show_toast(self.w, "Clave cambiada. Crea un kit nuevo.")
 
     # ---------- Recuperación y copias ----------
     def _build_copias(self) -> QWidget:
@@ -240,40 +280,36 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("Recuperación y copias"))
-        k, kl = self._card()
-        kl.addWidget(_muted("El kit offline es la única salida si olvidas la clave. Rotarlo invalida el anterior."))
-        b_kit = QPushButton("Ver / rotar kit de recuperación")
+        k, kl = _section("download", "Kit de recuperación")
+        b_kit = QPushButton("Ver / rotar kit")
         b_kit.setObjectName("ghost")
+        b_kit.setIcon(self._ic("key"))
+        b_kit.setToolTip("Muestra un kit nuevo e invalida el anterior")
         b_kit.clicked.connect(self._kit)
         kl.addWidget(b_kit)
         lay.addWidget(k)
-        c, cl = self._card()
-        cl.addWidget(_muted("Copias 100% cifradas. Al importar, el archivo de origen se tritura."))
-        last = settings.get_last_backup() or "sin copias aún"
-        self.lbl_bak = QLabel(f"Última copia: {last}")
+        c, cl = _section("copy", "Copias de seguridad")
+        last = settings.get_last_backup() or "Sin copias aún"
+        self.lbl_bak = QLabel(last)
         self.lbl_bak.setObjectName("muted")
         self.lbl_bak.setWordWrap(True)
         cl.addWidget(self.lbl_bak)
         rb = QHBoxLayout()
-        b_exp = QPushButton("Exportar copia")
+        b_exp = QPushButton("Exportar")
         b_exp.setObjectName("ghost")
+        b_exp.setIcon(self._ic("upload"))
+        b_exp.setToolTip("Guarda una copia cifrada en un archivo")
         b_exp.clicked.connect(self._export)
-        b_imp = QPushButton("Importar + triturar origen")
+        b_imp = QPushButton("Importar")
         b_imp.setObjectName("ghost")
+        b_imp.setIcon(self._ic("download"))
+        b_imp.setToolTip("Restaura una copia y tritura el archivo de origen")
         b_imp.clicked.connect(self._import)
         rb.addWidget(b_exp, 1)
         rb.addWidget(b_imp, 1)
         cl.addLayout(rb)
         lay.addWidget(c)
         return self._wrap(box)
-
-    def _close_host(self):
-        try:
-            if self._host is not None:
-                self._host.accept()
-        except (RuntimeError, Exception):
-            pass
 
     def _kit(self):
         from PySide6.QtWidgets import QDialog, QDialogButtonBox
@@ -283,7 +319,7 @@ class PrefsScreen(QWidget):
         pw = QLineEdit()
         pw.setEchoMode(QLineEdit.Password)
         pw.setPlaceholderText("Clave actual")
-        lay.addWidget(QLabel("Escribe tu clave actual para ver/rotar el kit:"))
+        lay.addWidget(QLabel("Clave actual:"))
         lay.addWidget(pw)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(d.accept)
@@ -312,7 +348,7 @@ class PrefsScreen(QWidget):
         except Exception:
             pass
         settings.set_last_backup(path)
-        self.lbl_bak.setText(f"Última copia: {path}")
+        self.lbl_bak.setText(path)
         show_toast(self.w, "Copia cifrada exportada")
 
     def _import(self):
@@ -336,24 +372,25 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("Actualizaciones"))
-        c, cl = self._card()
-        cl.addWidget(QLabel(f"Versión instalada: {APP_VERSION}"))
+        c, cl = _section("refresh", "Versión y actualizaciones")
+        ver = QHBoxLayout()
+        ver.addWidget(QLabel(f"Instalada: {APP_VERSION}"))
+        ver.addStretch(1)
+        cl.addLayout(ver)
         self.chk_upd = QCheckBox("Buscar actualizaciones al abrir")
         self.chk_upd.setChecked(settings.get_auto_update())
-        self.chk_upd.setToolTip("Solo entonces la app usa red (api.github.com, HTTPS).")
+        self.chk_upd.setToolTip("Solo entonces la app usa red (api.github.com, HTTPS)")
         self.chk_upd.toggled.connect(settings.set_auto_update)
         cl.addWidget(self.chk_upd)
-        skipped = settings.get_skipped_version()
-        if skipped:
-            cl.addWidget(_muted(f"Versión omitida: {skipped}"))
         row = QHBoxLayout()
         b_upd = QPushButton("Buscar ahora")
         b_upd.setObjectName("primary")
+        b_upd.setIcon(self._ic("refresh"))
+        b_upd.setToolTip("Comprueba si hay una versión nueva")
         b_upd.clicked.connect(self._check_update)
         b_reset = QPushButton("Restablecer avisos")
         b_reset.setObjectName("ghost")
-        b_reset.setToolTip("Vuelve a avisar de versiones omitidas.")
+        b_reset.setToolTip("Vuelve a avisar de versiones omitidas")
         b_reset.clicked.connect(self._reset_skipped)
         row.addWidget(b_upd, 1)
         row.addWidget(b_reset, 1)
@@ -375,12 +412,13 @@ class PrefsScreen(QWidget):
         lay = QVBoxLayout(box)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(10)
-        lay.addWidget(_h("Zona de peligro"))
-        c, cl = self._card()
-        cl.addWidget(_muted("Borra TODA la bóveda (cuentas + ajustes). Exige tu clave actual. "
-                            "Sin kit ni copia, no hay vuelta atrás."))
-        b_wipe = QPushButton("Borrar toda la bóveda…")
+        c, cl = _section("alert", "Borrar bóveda")
+        cl.addWidget(InfoBox("Borra cuentas y ajustes. Pide tu clave actual y no se puede deshacer.",
+                             tone="danger"))
+        b_wipe = QPushButton("Borrar todo…")
         b_wipe.setObjectName("danger")
+        b_wipe.setIcon(self._ic("trash"))
+        b_wipe.setToolTip("Borra definitivamente toda la bóveda")
         b_wipe.clicked.connect(self._wipe)
         cl.addWidget(b_wipe)
         lay.addWidget(c)
@@ -391,7 +429,7 @@ class PrefsScreen(QWidget):
         d = QDialog(self)
         d.setWindowTitle("Borrar todo")
         lay = QVBoxLayout(d)
-        lay.addWidget(QLabel("Escribe tu clave actual para borrar TODA la bóveda:"))
+        lay.addWidget(QLabel("Clave actual:"))
         pw = QLineEdit()
         pw.setEchoMode(QLineEdit.Password)
         lay.addWidget(pw)
@@ -411,12 +449,6 @@ class PrefsScreen(QWidget):
         show_toast(self.w, "Bóveda borrada")
         self._close_host()
         self.w.lock()
-
-
-def _h(t: str) -> QLabel:
-    l = QLabel(t)
-    l.setStyleSheet("font-size: 16px; font-weight: 700;")
-    return l
 
 
 def open_prefs_modal(window) -> None:
@@ -440,7 +472,7 @@ def open_prefs_modal(window) -> None:
     b_x = QPushButton()
     b_x.setObjectName("iconBtn")
     b_x.setIcon(_icon("x"))
-    b_x.setToolTip("Cerrar")
+    b_x.setToolTip("Cerrar preferencias")
     b_x.setFixedSize(36, 36)
     b_x.clicked.connect(host.reject)
     head.addWidget(b_x)
@@ -449,7 +481,6 @@ def open_prefs_modal(window) -> None:
     prefs._host = host
     prefs.refresh_stats()
     lay.addWidget(prefs, 1)
-    # Geometria de pantalla completa (igual que open_animated) + exec bloqueante.
     try:
         top = window.mapToGlobal(window.rect().topLeft())
         host.setGeometry(QRect(top, window.size()))
@@ -466,10 +497,3 @@ def open_prefs_modal(window) -> None:
         except (RuntimeError, Exception):
             pass
         host.deleteLater()
-
-
-def _muted(t: str) -> QLabel:
-    l = QLabel(t)
-    l.setObjectName("muted")
-    l.setWordWrap(True)
-    return l

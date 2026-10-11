@@ -192,3 +192,17 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     (eran flechas gigantes sin estilo); `QScrollBar:horizontal { height: 0 }` + `AlwaysOff` en el nav (barra fantasma).
     OJO: métricas de scrollbar offscreen (100/30) son artefacto del plugin offscreen — en real se ven finas y no hay
     warnings de parse del QSS; la verificación válida es captura real + pixel-check de colores.
+19. (2026-10-11) **REPLANTEO UI — sistema de diseño obligatorio (queja "todo simple").**
+    Reglas que ya no se rompen:
+    a) CERO texto de proceso/documentación en vistas: solo microcopy de acción (qué hacer / qué pasa).
+       Detalle técnico → `QToolTip` de su control. Internos (KDF, backoff, MVP, NTP) → README/AGENTS, jamás la vista.
+       Excepciones: avisos críticos irreversibles (kit una-vez, borrado) en `InfoBox` warn/danger.
+    b) Avisos SIEMPRE en `ui/widgets/info.py:InfoBox` (tono info/warn/danger/ok), nunca `QLabel#muted` suelto.
+    c) `QCheckBox` estilizado por QSS (`::indicator` 18px + checked violeta); prohibido el cuadro Fusion.
+    d) Botones con icono + texto claro + tooltip con el detalle ("los botones muestran la información").
+    e) Bordes limpios: cards `#2E2E32` + borde 1px `#45454A` + radio 12–16; hover = borde `#7A63D6` (sin dobles bordes).
+    f) Cero vacío accidental: listas en **grid responsive** (`_cols_for_width` sobre `self.width()`, NO el viewport
+       — el viewport miente antes del layout) 2↔1 columnas; estados vacíos con CTA; footer solo con acción real
+       (Vaciar papelera). Contadores cortos ("2 cuentas", sin "protegidas con...").
+    g) Secciones con `_section(icono, titulo)` + stat tiles con número grande; sub-nav sin h-scroll.
+    h) Verificación UI: stagger/tick tolerantes + pixel-check de tarjeta + cols 2↔1 + salida limpia RC=0.

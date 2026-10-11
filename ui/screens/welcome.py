@@ -1,11 +1,13 @@
 """Pantalla auth: crear boveda (primer arranque). Tarjeta compacta."""
 from __future__ import annotations
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QFormLayout, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QVBoxLayout, QWidget)
 
 from app import auth
 from ui.styles import animations as anim
+from ui.widgets.icons import icon
 from ui.widgets.toasts import show_toast
 
 
@@ -16,20 +18,19 @@ class WelcomeScreen(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(28, 28, 28, 28)
         lay.setSpacing(10)
-        title = QLabel("Authenticator")
+        title = QLabel("Crea tu bóveda")
         title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        title.setAlignment(Qt.AlignCenter)
         lay.addWidget(title)
-        sub = QLabel("Crea tu bóveda local. Sin cuentas, sin nube.")
-        sub.setObjectName("muted")
-        sub.setWordWrap(True)
-        lay.addWidget(sub)
         form = QFormLayout()
-        form.setSpacing(8)
+        form.setSpacing(10)
         self.user = QLineEdit()
         self.user.setPlaceholderText("Usuario local (p. ej. yo)")
+        self.user.setToolTip("Solo un nombre local, sin cuentas ni nube")
         self.p1 = QLineEdit()
         self.p1.setEchoMode(QLineEdit.Password)
         self.p1.setPlaceholderText("Clave maestra (12+, 3 de 4 clases)")
+        self.p1.setToolTip("Mínimo 12 caracteres: mayúsculas, minúsculas, dígitos y símbolos (3 de 4)")
         self.p2 = QLineEdit()
         self.p2.setEchoMode(QLineEdit.Password)
         self.p2.setPlaceholderText("Repite la clave maestra")
@@ -37,16 +38,14 @@ class WelcomeScreen(QWidget):
         form.addRow("Clave", self.p1)
         form.addRow("Repetir", self.p2)
         lay.addLayout(form)
-        hint = QLabel("Guarda los códigos de respaldo de cada proveedor en papel.")
-        hint.setObjectName("muted")
-        hint.setWordWrap(True)
-        lay.addWidget(hint)
         btn = QPushButton("Crear bóveda")
         btn.setObjectName("primary")
+        btn.setIcon(icon("check"))
+        btn.setToolTip("Crea la bóveda cifrada en este equipo")
         btn.clicked.connect(self._create)
         lay.addWidget(btn)
         lay.addStretch(1)
-        anim.stagger([title, sub, btn])
+        anim.stagger([title, btn])
 
     def _create(self):
         user = self.user.text().strip() or "yo"
