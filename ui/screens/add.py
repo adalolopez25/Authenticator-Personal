@@ -16,31 +16,11 @@ class AddScreen(QWidget):
     def __init__(self, window):
         super().__init__()
         self.w = window
+        self._host = None  # lo fija open_add_modal para poder cerrarse
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(24, 20, 24, 20)
+        lay.setContentsMargins(4, 4, 4, 4)
         lay.setSpacing(12)
-        # Header con icono
-        head = QHBoxLayout()
-        head.setContentsMargins(0, 0, 0, 0)
-        head.setSpacing(12)
-        badge = QLabel()
-        badge.setObjectName("authIcon")
-        badge.setPixmap(icon("plus").pixmap(28, 28))
-        badge.setFixedSize(56, 56)
-        badge.setAlignment(Qt.AlignCenter)
-        head.addWidget(badge)
-        titles = QVBoxLayout()
-        titles.setContentsMargins(0, 0, 0, 0)
-        titles.setSpacing(2)
-        t = QLabel("Añadir cuenta")
-        t.setStyleSheet("font-size: 22px; font-weight: 700;")
-        titles.addWidget(t)
-        s = QLabel("Pega el secreto o la URI otpauth:// del proveedor")
-        s.setObjectName("muted")
-        titles.addWidget(s)
-        head.addLayout(titles, 1)
-        lay.addLayout(head)
-        # Tarjeta de formulario
+        # Tarjeta de formulario (el modal aporta el header con X)
         card = QWidget()
         card.setObjectName("card")
         cl = QVBoxLayout(card)
@@ -117,19 +97,27 @@ class AddScreen(QWidget):
         btns = QHBoxLayout()
         btns.setContentsMargins(0, 0, 0, 0)
         btns.setSpacing(10)
-        self.b_back = QPushButton("Volver")
+        self.b_back = QPushButton("Cancelar")
         self.b_back.setObjectName("ghost")
         self.b_back.setIcon(icon("chev_l"))
-        self.b_back.clicked.connect(lambda: self.w.show_accounts())
+        self.b_back.setToolTip("Cerrar sin guardar")
+        self.b_back.clicked.connect(self._close_host)
         self.b_save = QPushButton("Guardar cuenta")
         self.b_save.setObjectName("primary")
         self.b_save.setIcon(icon("check"))
+        self.b_save.setToolTip("Cifra y guarda la cuenta nueva")
         self.b_save.clicked.connect(self._save)
         btns.addWidget(self.b_back, 1)
         btns.addWidget(self.b_save, 2)
         lay.addLayout(btns)
-        lay.addStretch(1)
         anim.stagger([card, prev])
+
+    def _close_host(self):
+        try:
+            if self._host is not None:
+                self._host.reject()
+        except (RuntimeError, Exception):
+            pass
 
     def _preview(self):
         raw = self.e_secret.text().strip()
@@ -194,4 +182,47 @@ class AddScreen(QWidget):
         store.create_account(blobs)
         self.e_secret.clear()
         show_toast(self.w, "Cuenta guardada (cifrada)")
+        self._close_host()
         self.w.show_accounts()
+
+
+def open_add_modal(window) -> None:
+    """Añadir cuenta en modal centrado (bloqueante, con X)."""
+    from PySide6.QtCore import QRect, QTimer
+    from PySide6.QtWidgets import QHBoxLayout as _HL
+    from ui.styles import animations as _anim
+    from ui.widgets.icons import icon as _icon
+    from ui.widgets.modal import ModalHost
+
+    host = ModalHost(window)
+    host.card.setMinimumSize(680, 560)
+    host.card.setMaximumSize(780, 680)
+    lay = QVBoxLayout(host.card)
+    lay.setContentsMargins(24, 20, 24, 20)
+    lay.setSpacing(10)
+    head = _HL()
+    head.setContentsMargins(0, 0, 0, 0)
+    title = QLabel("Añadir cuenta")
+    title.setStyleSheet("font-size: 20px; font-weight: 700;")
+    head.addWidget(title, 1)
+    b_x = QPushButton()
+    b_x.setObjectName("iconBtn")
+    b_x.setIcon(_icon("x"))
+    b_x.setToolTip("Cerrar sin guardar")
+    b_x.setFixedSize(36, 36)
+    b_x.clicked.connect(host.reject)
+    head.addWidget(b_x)
+    lay.addLayout(head)
+    form = AddScreen(window)
+    form._host = host
+    lay.addWidget(form, 1)
+    try:
+        top = window.mapToGlobal(window.rect().topLeft())
+        host.setGeometry(QRect(top, window.size()))
+    except Exception:
+        pass
+    QTimer.singleShot(60, lambda: _anim.fade_in(host.card, 200))
+    try:
+        host.exec()
+    finally:
+        host.deleteLater()

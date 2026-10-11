@@ -231,3 +231,9 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     atajo Ctrl+C, X con tooltip Esc. OJO: en un grab offscreen apareció un destello naranja transitorio en la
     esquina del arte; el censo de píxeles del modal (12 colores top) NO contiene naranja — artefacto de frame
     (deleteLater/repolish a medio pintar), no bug. Si reaparece en captura REAL, reabrir.
+23. (2026-10-11) **Sidebar final: sin Añadir, prefs abajo, colapso fluido, vacío centrado.**
+    El sidebar solo navega (Cuentas/Papelera); Añadir vive SOLO en el header (modal `open_add_modal`,
+    Cancelar + Guardar, cierra solo al guardar). Preferencias encima de Bloquear (zona inferior).
+    Colapso fluido real: `collapse_width` 240ms + swap de textos a MITAD (`QTimer.singleShot(120)`) —
+    verificado con anchos intermedios (72…101…199…252), no salto seco.
+    EmptyState centrado vertical de verdad (stretch 1 arriba/abajo del mensaje en el grid).

@@ -188,14 +188,18 @@ class AccountsScreen(QWidget):
         for c in range(cols):
             self.grid.setColumnStretch(c, 1)
         if not ids:
+            # Centrado vertical real: stretch arriba y abajo del mensaje.
+            self.grid.setRowStretch(0, 1)
             empty = EmptyState(trash=self.trash_mode, on_add=lambda: self.w.show_add())
-            self.grid.addWidget(empty, 0, 0, 1, cols)
+            self.grid.addWidget(empty, 1, 0, 1, cols)
+            self.grid.setRowStretch(2, 1)
         for n, acc_id in enumerate(ids):
             d = self.cache[acc_id]
             tile = AccountTile(self, acc_id, d["issuer"], d["label"])
             tile.setProperty("acc", acc_id)
             self.grid.addWidget(tile, n // cols, n % cols)
-        self.grid.setRowStretch((len(ids) + cols - 1) // cols + 1, 1)
+        if ids:
+            self.grid.setRowStretch((len(ids) + cols - 1) // cols + 1, 1)
         a, b = store.count_accounts()
         self.lbl_count.setText(f"{b} en papelera" if self.trash_mode else f"{a} cuentas")
         self.b_empty.setVisible(self.trash_mode and b > 0)

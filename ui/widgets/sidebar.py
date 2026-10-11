@@ -1,11 +1,11 @@
 """Sidebar de navegacion (solo modo escritorio/app). Colapsable con animacion.
 
-Header con marca + boton chevron para ocultar/mostrar (como la otra app).
-Abajo: bloquear + version.
+Nav: Cuentas + Papelera. Preferencias vive abajo, justo encima de Bloquear.
+El colapso intercambia textos a mitad de la animacion (fluido, sin salto).
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (QButtonGroup, QHBoxLayout, QLabel, QPushButton,
                                QVBoxLayout, QWidget)
 
@@ -14,10 +14,11 @@ from ui.widgets.icons import icon
 
 EXPANDED = 252
 COLLAPSED = 72
+COLLAPSE_MS = 240
 
 
 class Sidebar(QWidget):
-    navigated = Signal(str)  # accounts | add | trash | prefs
+    navigated = Signal(str)  # accounts | trash | prefs
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -57,9 +58,7 @@ class Sidebar(QWidget):
         self.buttons: dict[str, QPushButton] = {}
         self.badges: dict[str, QLabel] = {}
         for key, label, ic in (("accounts", "Cuentas", "grid"),
-                               ("add", "Añadir cuenta", "plus"),
-                               ("trash", "Papelera", "trash"),
-                               ("prefs", "Preferencias", "sliders")):
+                               ("trash", "Papelera", "trash")):
             row = QHBoxLayout()
             row.setContentsMargins(0, 0, 0, 0)
             row.setSpacing(4)
@@ -78,19 +77,33 @@ class Sidebar(QWidget):
             row.addWidget(badge)
             lay.addLayout(row)
         lay.addStretch(1)
+        # Preferencias arriba de Bloquear (zona inferior).
+        self.b_prefs = QPushButton("Preferencias")
+        self.b_prefs.setObjectName("sideBtn")
+        self.b_prefs.setIcon(icon("sliders"))
+        self.b_prefs.setToolTip("Abrir preferencias")
+        self.b_prefs.clicked.connect(lambda: self._go("prefs"))
+        lay.addWidget(self.b_prefs)
         self.lbl_ver = QLabel("")
         self.lbl_ver.setObjectName("muted")
+        self.lbl_ver.setAlignment(Qt.AlignCenter)
         lay.addWidget(self.lbl_ver)
         self.b_lock = QPushButton("Bloquear")
         self.b_lock.setObjectName("ghost")
         self.b_lock.setIcon(icon("lock"))
+        self.b_lock.setToolTip("Bloquea la app ahora")
         lay.addWidget(self.b_lock)
 
     def _go(self, key: str):
-        anim.press_scale(self.buttons[key])
+        if key in self.buttons:
+            anim.press_scale(self.buttons[key])
+        else:
+            anim.press_scale(self.b_prefs)
         self.navigated.emit(key)
 
     def set_active(self, key: str):
+        if key == "prefs":
+            return  # el modal no cambia de pagina: se conserva la anterior
         b = self.buttons.get(key)
         if b and not b.isChecked():
             b.setChecked(True)
@@ -114,27 +127,35 @@ class Sidebar(QWidget):
     def toggle(self):
         self._collapsed = not self._collapsed
         target = COLLAPSED if self._collapsed else EXPANDED
-        anim.collapse_width(self, target, 220)
-        if self._collapsed:
-            self.brand.setText("A")
-            self.brand_icon.setVisible(False)
-            self._cap.setVisible(False)
-            for b in self.buttons.values():
-                b.setText("")
-            self.lbl_ver.setText("")
-            self.b_lock.setText("")
-            self.b_fold.setIcon(icon("chev_r"))
-            self.b_fold.setToolTip("Mostrar barra lateral")
-            self.set_trash_count(self._trash_n)
-        else:
-            self.brand.setText("Authenticator")
-            self.brand_icon.setVisible(True)
-            self._cap.setVisible(True)
-            for key, label in (("accounts", "Cuentas"), ("add", "Añadir cuenta"),
-                               ("trash", "Papelera"), ("prefs", "Preferencias")):
-                self.buttons[key].setText(label)
-            self.b_lock.setText("Bloquear")
-            self.b_fold.setIcon(icon("chev_l"))
-            self.b_fold.setToolTip("Ocultar barra lateral")
-            self.set_trash_count(self._trash_n)
-            self.set_version(getattr(self, "_ver", "?"))
+        anim.collapse_width(self, target, COLLAPSE_MS)
+        # Swap de textos a mitad de la animacion: queda enmascarado por el
+        # movimiento y se percibe fluido en vez de un salto seco.
+        QTimer.singleShot(COLLAPSE_MS // 2, self._apply_collapsed_text)
+        self.b_fold.setIcon(icon("chev_r" if self._collapsed else "chev_l"))
+        self.b_fold.setToolTip("Mostrar barra lateral" if self._collapsed
+                               else "Ocultar barra lateral")
+
+    def _apply_collapsed_text(self):
+        try:
+            if self._collapsed:
+                self.brand.setText("")
+                self.brand_icon.setVisible(False)
+                self._cap.setVisible(False)
+                for b in self.buttons.values():
+                    b.setText("")
+                self.b_prefs.setText("")
+                self.lbl_ver.setText("")
+                self.b_lock.setText("")
+                self.set_trash_count(self._trash_n)
+            else:
+                self.brand.setText("Authenticator")
+                self.brand_icon.setVisible(True)
+                self._cap.setVisible(True)
+                for key, label in (("accounts", "Cuentas"), ("trash", "Papelera")):
+                    self.buttons[key].setText(label)
+                self.b_prefs.setText("Preferencias")
+                self.b_lock.setText("Bloquear")
+                self.set_trash_count(self._trash_n)
+                self.set_version(getattr(self, "_ver", "?"))
+        except RuntimeError:
+            pass
