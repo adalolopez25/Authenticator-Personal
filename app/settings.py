@@ -60,3 +60,19 @@ def get_last_backup() -> str | None:
 
 def set_last_backup(label: str) -> None:
     store.meta_set("last_backup", label)
+
+
+def get_auto_update() -> bool:
+    return _get_bool("auto_update", True)
+
+
+def set_auto_update(value: bool) -> None:
+    set_bool("auto_update", value)
+
+
+def get_skipped_version() -> str | None:
+    return store.meta_get("skipped_version")
+
+
+def set_skipped_version(version: str) -> None:
+    store.meta_set("skipped_version", version)

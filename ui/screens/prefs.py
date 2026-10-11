@@ -97,10 +97,20 @@ class PrefsScreen(QWidget):
         rb.addWidget(b_exp, 1)
         rb.addWidget(b_imp, 1)
         lay.addLayout(rb)
-        # Acerca de
+        # Acerca de + actualizaciones
         lay.addWidget(_h("Acerca de"))
         lay.addWidget(_muted(f"Authenticator {APP_VERSION} · offline · sin cuentas · sin nube.\n"
                              "Reloj sincronizado (NTP) requerido; TOTP no protege contra phishing."))
+        lay.addWidget(_h("Actualizaciones"))
+        self.chk_upd = QCheckBox("Buscar actualizaciones al abrir")
+        self.chk_upd.setChecked(settings.get_auto_update())
+        self.chk_upd.setToolTip("Solo entonces la app usa red (api.github.com, HTTPS).")
+        self.chk_upd.toggled.connect(settings.set_auto_update)
+        lay.addWidget(self.chk_upd)
+        b_upd = QPushButton("Buscar actualizaciones ahora")
+        b_upd.setObjectName("ghost")
+        b_upd.clicked.connect(self._check_update)
+        lay.addWidget(b_upd)
         b_back = QPushButton("Volver")
         b_back.setObjectName("ghost")
         b_back.clicked.connect(lambda: self.w.show_accounts())
@@ -111,6 +121,10 @@ class PrefsScreen(QWidget):
         from ui.styles import animations as anim
         settings.set_reduced_motion(v)
         anim.set_reduced(v)
+
+    def _check_update(self):
+        from ui.widgets.update_modal import check_now
+        check_now(self.w, APP_VERSION)
 
     def _verify(self):
         key = self.w.key

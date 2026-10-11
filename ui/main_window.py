@@ -66,6 +66,14 @@ class MainWindow(QMainWindow):
             self.show_unlock()
         else:
             self.show_welcome()
+        # Chequeo de actualizacion (hilo, fail-silent, respeta opt-out).
+        try:
+            from app.version import APP_VERSION
+            from ui.widgets.update_modal import maybe_show_update
+            from PySide6.QtCore import QTimer as _Q
+            _Q.singleShot(2500, lambda: maybe_show_update(self, APP_VERSION))
+        except Exception:
+            pass
 
     # ---- navegacion ----
     def _set(self, w: QWidget, app_mode: bool):
