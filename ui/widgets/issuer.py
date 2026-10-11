@@ -26,3 +26,23 @@ def initials(issuer: str, label: str = "") -> str:
     if len(parts) == 1:
         return parts[0][:2].upper()
     return (parts[0][0] + parts[1][0]).upper()
+
+
+def art_label(issuer: str, label: str = "", px: int = 76):
+    """QLabel cuadrado con el icono de plataforma o el monograma (fallback)."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QLabel
+    from ui.widgets.brands import brand_icon, match_brand
+    brand = match_brand(issuer)
+    art = QLabel()
+    art.setFixedSize(px, px)
+    art.setAlignment(Qt.AlignCenter)
+    if brand is not None:
+        art.setObjectName("tileBrand")
+        art.setPixmap(brand_icon(brand).pixmap(int(px * 0.68), int(px * 0.68)))
+        art.setToolTip(issuer or label or "")
+    else:
+        art.setObjectName("tileMono")
+        art.setProperty("c", str(color_index(issuer)))
+        art.setText(initials(issuer, label))
+    return art

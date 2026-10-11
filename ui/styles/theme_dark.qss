@@ -249,6 +249,8 @@ QLabel#avatar {
   font-weight: 700;
 }
 /* Monograma de mosaico: 12 colores fijos por emisor (propiedad `c`). */
+QLabel#tileBrand { background-color: #232329; border: 1px solid #45454A;
+  border-radius: 18px; }
 QLabel#tileMono { border-radius: 18px; color: #FFFFFF; font-size: 30px; font-weight: 700; }
 QLabel#tileMono[c="0"] { background-color: #5F4BB0; }
 QLabel#tileMono[c="1"] { background-color: #2F6F5E; }

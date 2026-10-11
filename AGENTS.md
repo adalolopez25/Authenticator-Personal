@@ -215,3 +215,13 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     Grid `width//240` (1–4 cols) con stretch igual: siempre llena el lado derecho, cero hueco.
     Sin logos de marcas (assets): offline + marcas + calidad del trazo a mano → monogramas como Google Authenticator.
     El modal cierra solo si se bloquea/elimina; cada tick renueva `_last_active` (mirar ≠ inactivo).
+21. (2026-10-11) **Mosaicos grandes 2-col + iconos de plataforma + BUG `WA_StyledBackground`.**
+    Grid max 2 columnas (`width>=600`), mosaicos 220×170 mín con stretch igual: 2 ocupan todo el ancho,
+    el resto debajo. `brands.py`: 9 glifos verificados visualmente (contact sheet) estilo Feather/línea —
+    github, google G, microsoft, facebook, instagram, X, twitch, linkedin, telegram — con `match_brand()` por
+    palabras clave; resto = monograma. `issuer.art_label()` centraliza icono-vs-monograma (lista + modal).
+    BUG GRAVE cazado: el fondo QSS del mosaico NO se pintaba en ventana (sí en grab propio) porque los QWidget
+    custom necesitan `setAttribute(Qt.WA_StyledBackground, True)` — el mismo bug latente que tenían las filas
+    `#row` (el pixel-check en esquina redondeada lo ocultó). REGLA: todo widget custom con fondo/borde QSS lo lleva;
+    verificación = sample en composición de ventana, JAMÁS grab propio. Tests Qt siempre en subproceso
+    (el teardown Qt en pytest rompe el proceso con -1073740791).

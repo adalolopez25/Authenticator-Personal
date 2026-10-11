@@ -11,7 +11,7 @@ from app import settings, totp
 from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
-from ui.widgets.issuer import color_index, initials
+from ui.widgets.issuer import art_label
 from ui.widgets.modal import ModalHost
 from ui.widgets.toasts import show_toast
 
@@ -29,11 +29,9 @@ class AccountModal(QWidget):
         head = QHBoxLayout()
         head.setContentsMargins(0, 0, 0, 0)
         head.setSpacing(12)
-        self.mono = QLabel("?")
-        self.mono.setObjectName("tileMono")
-        self.mono.setFixedSize(64, 64)
-        self.mono.setAlignment(Qt.AlignCenter)
-        head.addWidget(self.mono)
+        self._head = head
+        self.art = art_label("", "", 64)
+        head.addWidget(self.art)
         names = QVBoxLayout()
         names.setContentsMargins(0, 0, 0, 0)
         names.setSpacing(2)
@@ -150,12 +148,12 @@ class AccountModal(QWidget):
         if not d:
             return
         iss, lab = d["issuer"], d["label"]
-        self.mono.setText(initials(iss, lab))
-        self.mono.setProperty("c", str(color_index(iss)))
         try:
-            st = self.mono.style()
-            st.unpolish(self.mono)
-            st.polish(self.mono)
+            fresh = art_label(iss, lab, 64)
+            old = self.art
+            self.art = fresh
+            self._head.replaceWidget(old, fresh)
+            old.deleteLater()
         except RuntimeError:
             pass
         self.lbl_issuer.setText(iss or lab or "Cuenta")

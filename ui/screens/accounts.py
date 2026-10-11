@@ -12,30 +12,28 @@ from app import settings, store, vault
 from app.utils import clipboard_history_on, copy_and_clear
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
-from ui.widgets.issuer import color_index, initials
+from ui.widgets.issuer import art_label
 from ui.widgets.toasts import show_toast
 
 
 class AccountTile(QWidget):
-    """Mosaico grande: monograma + nombres. Clic = modal con el codigo unico."""
+    """Mosaico grande: icono de plataforma o monograma + nombres. Clic = modal."""
 
     def __init__(self, parent_list, acc_id: str, issuer: str, label: str):
         super().__init__()
         self.L = parent_list
         self.acc_id = acc_id
         self.setObjectName("tile")
+        # OBLIGATORIO en widgets custom con fondo QSS: sin esto el fondo
+        # NO se pinta en la ventana (solo en grab propio). Ver AGENTS §21.
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumSize(200, 150)
+        self.setMinimumSize(220, 170)
         self.setToolTip(f"Ver código de {issuer or label or 'la cuenta'}")
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(16, 14, 16, 14)
-        lay.setSpacing(14)
-        mono = QLabel(initials(issuer, label))
-        mono.setObjectName("tileMono")
-        mono.setProperty("c", str(color_index(issuer)))
-        mono.setFixedSize(76, 76)
-        mono.setAlignment(Qt.AlignCenter)
-        lay.addWidget(mono)
+        lay.setContentsMargins(18, 16, 18, 16)
+        lay.setSpacing(16)
+        lay.addWidget(art_label(issuer, label, 88))
         txt = QVBoxLayout()
         txt.setContentsMargins(0, 0, 0, 0)
         txt.setSpacing(4)
@@ -234,9 +232,9 @@ class AccountsScreen(QWidget):
             pass
 
     def _cols_for_width(self) -> int:
-        """Columnas según ancho: mosaicos ~240px que siempre llenan el lado derecho."""
+        """2 mosaicos grandes por fila en ancho (ocupan todo), 1 en estrecho."""
         try:
-            return max(1, min(4, self.width() // 240))
+            return 2 if self.width() >= 600 else 1
         except RuntimeError:
             return 1
 
