@@ -313,10 +313,10 @@ QPushButton#iconBtn {
   color: #B8A6E0;
 }
 QPushButton#iconBtn:hover { border: 1px solid #7A63D6; color: #FFFFFF; }
-/* Sub-nav de Preferencias */
+/* Sub-nav de Preferencias: sin borde gris, fondo purpura oscuro. */
 QListWidget#prefNav {
   background-color: #2A2138;
-  border: 1px solid #3A3A3C;
+  border: none;
   border-radius: 12px;
   padding: 6px;
   outline: none;
@@ -328,3 +328,61 @@ QListWidget#prefNav::item {
 }
 QListWidget#prefNav::item:hover { background-color: #33264D; color: #FFFFFF; }
 QListWidget#prefNav::item:selected { background-color: #3A2F5E; color: #FFFFFF; font-weight: 600; }
+/* Contenido de Preferencias: fondo unificado sin negro dentro de tarjetas. */
+QScrollArea#prefContent, QScrollArea#prefContent QWidget,
+QStackedWidget#prefStack, QStackedWidget#prefStack QWidget {
+  background-color: #2C2C2E;
+}
+/* Stat tiles: mismo gris que tarjetas, padding amplio. */
+QWidget#statTile {
+  background-color: #2C2C2E;
+  border: 1px solid #4A3A6E;
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+QLabel#statNum { font-size: 26px; font-weight: 700; color: #FFFFFF; background-color: transparent; }
+QWidget#statTile QLabel#muted { color: #A9A9B0; }
+/* Tarjetas de seccion en prefs: mismo gris que el fondo, padding amplio. */
+QWidget#card {
+  background-color: #2C2C2E;
+  border: 1px solid #4A3A6E;
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+QWidget#card:hover { border: 1px solid #7A63D6; }
+/* Los controles heredan el gris de la card: sin fondos negros. */
+QWidget#card QWidget,
+QWidget#card QLabel,
+QWidget#card QCheckBox,
+QWidget#card QComboBox,
+QWidget#card QSpinBox,
+QWidget#card QLineEdit {
+  background-color: transparent;
+}
+QWidget#card QComboBox, QWidget#card QSpinBox, QWidget#card QLineEdit {
+  border: 1px solid #4A3A6E;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #FFFFFF;
+}
+QWidget#card QComboBox:focus, QWidget#card QSpinBox:focus, QWidget#card QLineEdit:focus {
+  border: 2px solid #7A63D6;
+}
+QWidget#card QComboBox::drop-down {
+  width: 0;
+  border: none;
+  background-color: transparent;
+}
+QWidget#card QComboBox QAbstractItemView {
+  background-color: #2C2C2E;
+  color: #FFFFFF;
+  selection-background-color: #7A63D6;
+  border: 1px solid #4A3A6E;
+}
+QWidget#card QSpinBox::up-button, QWidget#card QSpinBox::down-button {
+  width: 26px;
+  border: none;
+  border-left: 1px solid #4A3A6E;
+  background-color: transparent;
+}
+QWidget#card QSpinBox::up-button:hover, QWidget#card QSpinBox::down-button:hover { background-color: #4A3A6E; }

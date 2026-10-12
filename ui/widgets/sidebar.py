@@ -77,9 +77,9 @@ class Sidebar(QWidget):
             row.addWidget(badge)
             lay.addLayout(row)
         lay.addStretch(1)
-        # Preferencias arriba de Bloquear (zona inferior).
+        # Preferencias arriba de Bloquear: mismo estilo fantasma centrado.
         self.b_prefs = QPushButton("Preferencias")
-        self.b_prefs.setObjectName("sideBtn")
+        self.b_prefs.setObjectName("ghost")
         self.b_prefs.setIcon(icon("sliders"))
         self.b_prefs.setToolTip("Abrir preferencias")
         self.b_prefs.clicked.connect(lambda: self._go("prefs"))

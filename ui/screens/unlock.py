@@ -1,13 +1,14 @@
-"""Pantalla auth: desbloqueo con backoff 5 intentos."""
+"""Pantalla auth: desbloqueo con backoff 5 intentos. Estilo profesional."""
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-                               QPushButton, QVBoxLayout, QWidget)
+                                QPushButton, QVBoxLayout, QWidget)
 
 from app import auth
 from ui.styles import animations as anim
 from ui.widgets.icons import icon
+from ui.widgets.info import InfoBox
 
 
 class UnlockScreen(QWidget):
@@ -15,28 +16,44 @@ class UnlockScreen(QWidget):
         super().__init__()
         self.w = window
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(28, 28, 28, 28)
-        lay.setSpacing(10)
+        lay.setContentsMargins(32, 36, 32, 36)
+        lay.setSpacing(0)
+        lay.addStretch(1)
+        # Título
         title = QLabel("Desbloquear")
-        title.setStyleSheet("font-size: 22px; font-weight: 700;")
+        title.setStyleSheet("font-size: 26px; font-weight: 700;")
         title.setAlignment(Qt.AlignCenter)
         lay.addWidget(title)
+        # Info de intentos
         self.info = QLabel("")
         self.info.setObjectName("muted")
         self.info.setAlignment(Qt.AlignCenter)
+        self.info.setStyleSheet("font-size: 13px; margin-top: 4px;")
         lay.addWidget(self.info)
+        lay.addSpacing(20)
+        # Campo de clave
         self.pw = QLineEdit()
         self.pw.setEchoMode(QLineEdit.Password)
         self.pw.setPlaceholderText("Clave maestra")
+        self.pw.setStyleSheet("font-size: 16px; padding: 12px 16px;")
         self.pw.returnPressed.connect(self._unlock)
         lay.addWidget(self.pw)
+        lay.addSpacing(16)
+        # Botón desbloquear
         btn = QPushButton("Desbloquear")
         btn.setObjectName("primary")
         btn.setIcon(icon("lock"))
         btn.setToolTip("Abre la bóveda con tu clave maestra")
+        btn.setStyleSheet("font-size: 16px; padding: 14px;")
         btn.clicked.connect(self._unlock)
         lay.addWidget(btn)
+        lay.addSpacing(20)
+        # InfoBox de recuperación
+        lay.addWidget(InfoBox("Si olvidaste la clave, usa tu kit de recuperación offline.", tone="info"))
+        lay.addStretch(1)
+        # Zona inferior: olvidé la clave + borrar
         row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
         self.b_kit = QPushButton("Olvidé la clave")
         self.b_kit.setObjectName("ghost")
         self.b_kit.setIcon(icon("key"))
@@ -50,7 +67,6 @@ class UnlockScreen(QWidget):
         row.addWidget(self.b_kit, 1)
         row.addWidget(self.b_wipe, 1)
         lay.addLayout(row)
-        lay.addStretch(1)
         anim.stagger([title, btn])
         self.refresh()
 

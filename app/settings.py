@@ -5,6 +5,7 @@ from app import store
 
 DEFAULT_AUTOLOCK_MIN = 3
 DEFAULT_CLIPBOARD_SEC = 15
+DEFAULT_FULLSCREEN = False
 
 
 def _get_int(key: str, default: int, lo: int, hi: int) -> int:
@@ -76,3 +77,11 @@ def get_skipped_version() -> str | None:
 
 def set_skipped_version(version: str) -> None:
     store.meta_set("skipped_version", version)
+
+
+def get_fullscreen() -> bool:
+    return _get_bool("fullscreen", DEFAULT_FULLSCREEN)
+
+
+def set_fullscreen(value: bool) -> None:
+    set_bool("fullscreen", value)

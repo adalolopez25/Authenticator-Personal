@@ -121,9 +121,9 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
 
 ## 9. DONE MVP
 
-* [ ] Alta por secreto y por URI, códigos correctos contra vectores RFC y 1 cuenta real.
-* [ ] Bóveda cifrada en reposo, lock/backoff/kit verificados con tests.
-* [ ] Export/import cifrado roundtrip + triturar origen; `pytest -q` verde; Setup instala/desinstala dejando `data/` intacta.
+* [x] Alta por secreto y por URI, códigos correctos contra vectores RFC y 1 cuenta real.
+* [x] Bóveda cifrada en reposo, lock/backoff/kit verificados con tests.
+* [x] Export/import cifrado roundtrip + triturar origen; `pytest -q` verde; Setup instala/desinstala dejando `data/` intacta.
 
 ## 10. Historial de construcción — errores y soluciones (apuntar aquí, no repetir)
 
@@ -237,3 +237,46 @@ tests/                  # test_totp.py (vectores RFC) + test_vault/store/auth
     Colapso fluido real: `collapse_width` 240ms + swap de textos a MITAD (`QTimer.singleShot(120)`) —
     verificado con anchos intermedios (72…101…199…252), no salto seco.
     EmptyState centrado vertical de verdad (stretch 1 arriba/abajo del mensaje en el grid).
+24. (2026-10-11) **QComboBox::drop-down visible como cuadrado fantasma.**
+    Causa: el subcontrol `::drop-down` tiene `width: 30px` + `border-left` por defecto,
+    creando un cuadrado separado a la derecha del campo. No es un bug de la app, es el estilo nativo.
+    Solución: `width: 0; border: none; background: transparent` en `QWidget#card QComboBox::drop-down`.
+    Verificación: 30 tests pass + captura visual limpia.
+25. (2026-10-11) **Contenido de Preferencias con fondos negros dentro de cards grises.**
+    Causa: el global `QWidget { background-color: #1E1E1E }` se hereda a todos los widgets dentro
+    de las cards (#2C2C2E), creando un contraste feo. Los controles (QComboBox, QSpinBox, QLineEdit)
+    también tenían su propio fondo opaco.
+    Solución: `QWidget#card QWidget, QLabel, QCheckBox, QComboBox, QSpinBox, QLineEdit
+    { background-color: transparent }` + bordes púrpura sutiles `#4A3A6E`.
+    Verificación: pixel-check de tarjetas sin negro interior + tests verdes.
+26. (2026-10-11) **Contenido de Preferencias arriba con espacio vacío abajo.**
+    Causa: `_wrap()` tenía `addStretch(2)` después del contenido, empujando todo arriba sin centrar.
+    Solución: eliminar stretch final + `addStretch(1)` antes y después para centrado real + padding
+    uniforme `16px` + `setStretchFactor(self.pages, 1)` para que el contenedor ocupe todo el alto.
+    Verificación: captura visual con contenido centrado + tests verdes.
+27. (2026-10-11) **QSpinBox sin utilidad en Añadir cuenta (dígitos/periodo).**
+    Causa: el usuario pidió selects en vez de inputs numéricos. Los QSpinBox son poco prácticos
+    para valores fijos (6-8 dígitos, periodos estándar).
+    Solución: reemplazar por `QComboBox` con opciones predefinidas + icono `?` de ayuda con
+    explicación al hacer clic. Método `_with_help()` reutilizable. Referencias actualizadas de
+    `.value()` a `int(.currentText())`.
+    Verificación: 30 tests pass.
+28. (2026-10-11) **Pantalla completa no persistía entre sesiones.**
+    Causa: no había preferencia de guardado. La ventana siempre abría en modo normal.
+    Solución: `settings.get_fullscreen()` / `set_fullscreen()` + `toggle_fullscreen()` en
+    MainWindow + `resizeEvent` que sincroniza + restauración en `__init__`.
+    Verificación: preferencia se guarda en DB meta + tests verdes.
+29. (2026-10-11) **Ventana de desbloqueo sin estilo profesional.**
+    Causa: layout básico con márgenes pequeños, sin jerarquía visual, sin InfoBox de ayuda.
+    Solución: reescritura completa con `margin 32/36`, `font-size 26px` título, `font-size 16px`
+    campos, InfoBox de recuperación, espaciado vertical con `addStretch(1)` arriba/abajo.
+    Verificación: captura visual profesional + tests verdes.
+30. (2026-10-11) **Sin registro de cuenta con verificación Gmail.**
+    Causa: no existía flujo de registro. La app iba directo a crear bóveda sin verificar identidad.
+    Solución: `app/mail.py` con SMTP (smtplib+ssl) para enviar códigos de 6 dígitos +
+    `ui/screens/register.py` con nombre, correo, contraseña y verificación + conexión en
+    `MainWindow.__init__` (si no hay `user_email` en meta, muestra registro primero).
+    Verificación: 30 tests pass. Requiere `smtplib` (stdlib, sin deps nuevas).
+31. (2026-10-11) **Icono de interrogación SVG no existía.**
+    Causa: `icons.py` no tenía glifo de `question` para los botones de ayuda.
+    Solución: agregado `"question"` con círculo + `?` estilo Feather. Verificación: tests verdes.

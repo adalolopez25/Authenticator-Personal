@@ -50,6 +50,9 @@ class MainWindow(QMainWindow):
             watch_session_lock(self, self.lock)
         except Exception:
             pass
+        # Restaurar pantalla completa si estaba activa
+        if settings.get_fullscreen():
+            self.showFullScreen()
         if store.vault_exists():
             self.show_unlock()
         else:

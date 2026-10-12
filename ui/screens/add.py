@@ -39,14 +39,16 @@ class AddScreen(QWidget):
         self.e_secret.setPlaceholderText("Secreto base32 o URI otpauth:// completa")
         self.e_secret.setClearButtonEnabled(True)
         self.e_secret.textChanged.connect(self._preview)
-        self.s_digits = QSpinBox()
-        self.s_digits.setRange(6, 8)
-        self.s_digits.setValue(6)
-        self.s_period = QSpinBox()
-        self.s_period.setRange(10, 300)
-        self.s_period.setValue(30)
-        self.s_digits.valueChanged.connect(lambda: self._preview())
-        self.s_period.valueChanged.connect(lambda: self._preview())
+        self.s_digits = QComboBox()
+        self.s_digits.addItems(["6", "7", "8"])
+        self.s_digits.setCurrentText("6")
+        self.s_digits.setToolTip("Número dígitos del código (6–8)")
+        self.s_period = QComboBox()
+        self.s_period.addItems(["10", "15", "30", "60", "90", "120", "180", "300"])
+        self.s_period.setCurrentText("30")
+        self.s_period.setToolTip("Segundos que dura cada código")
+        self.s_digits.currentTextChanged.connect(lambda: self._preview())
+        self.s_period.currentTextChanged.connect(lambda: self._preview())
         self.c_algo = QComboBox()
         self.c_algo.addItems(["SHA1", "SHA256", "SHA512"])
         self.c_algo.currentTextChanged.connect(lambda: self._preview())
@@ -56,15 +58,29 @@ class AddScreen(QWidget):
         row_opt = QHBoxLayout()
         row_opt.setContentsMargins(0, 0, 0, 0)
         row_opt.setSpacing(8)
-        for lab, wid in (("Dígitos", self.s_digits), ("Periodo (s)", self.s_period),
-                         ("Algoritmo", self.c_algo)):
+        for lab, wid, tip in (
+            ("Dígitos", self.s_digits, "Número de dígitos del código TOTP.\nEstándar: 6 dígitos.\nAlgunos servicios usan 7 u 8."),
+            ("Periodo (s)", self.s_period, "Segundos que dura cada código.\nEstándar: 30 segundos.\nAlgunos servicios usan 60 o más."),
+            ("Algoritmo", self.c_algo, "Algoritmo de hash del TOTP.\nEstándar: SHA1.\nSHA256/SHA512 son más seguros."),
+        ):
             cell = QVBoxLayout()
             cell.setContentsMargins(0, 0, 0, 0)
             cell.setSpacing(4)
             l = QLabel(lab)
             l.setObjectName("muted")
             cell.addWidget(l)
-            cell.addWidget(wid)
+            hbox = QHBoxLayout()
+            hbox.setContentsMargins(0, 0, 0, 0)
+            hbox.setSpacing(4)
+            hbox.addWidget(wid, 1)
+            btn_help = QPushButton()
+            btn_help.setObjectName("iconBtn")
+            btn_help.setIcon(icon("question"))
+            btn_help.setFixedSize(24, 24)
+            btn_help.setToolTip(tip)
+            btn_help.clicked.connect(lambda checked=False, t=tip: QMessageBox.information(self, "Ayuda", t))
+            hbox.addWidget(btn_help)
+            cell.addLayout(hbox)
             row_opt.addLayout(cell, 1)
         cl.addLayout(form)
         cl.addLayout(row_opt)
@@ -133,8 +149,8 @@ class AddScreen(QWidget):
                     self.e_issuer.setText(p["issuer"])
                 if not self.e_label.text().strip() and p["label"]:
                     self.e_label.setText(p["label"])
-                self.s_digits.setValue(p["digits"])
-                self.s_period.setValue(p["period"])
+                self.s_digits.setCurrentText(str(p["digits"]))
+                self.s_period.setCurrentText(str(p["period"]))
                 self.c_algo.setCurrentText(p["algo"].upper())
                 import base64 as _b
                 sec = _b.b32decode(p["secret_b32"] + "=" * (-len(p["secret_b32"]) % 8))
@@ -143,8 +159,8 @@ class AddScreen(QWidget):
                 p = totp.parse_any(raw)
                 import base64 as _b
                 sec = _b.b32decode(p["secret_b32"] + "=" * (-len(p["secret_b32"]) % 8))
-                code = totp.generate(sec, digits=self.s_digits.value(),
-                                      period=self.s_period.value(),
+                code = totp.generate(sec, digits=int(self.s_digits.currentText()),
+                                      period=int(self.s_period.currentText()),
                                       algo=self.c_algo.currentText())
             self.lbl_code.setText(f"{code[:len(code) // 2]} {code[len(code) // 2:]}")
             self.lbl_hint.setText("Coincide con tu proveedor: es válido. Guárdalo.")
@@ -166,8 +182,8 @@ class AddScreen(QWidget):
                 label = self.e_label.text().strip() or p["label"] or "Cuenta"
             else:
                 p0 = totp.parse_any(raw)
-                p = {"secret_b32": p0["secret_b32"], "digits": self.s_digits.value(),
-                     "period": self.s_period.value(),
+                p = {"secret_b32": p0["secret_b32"], "digits": int(self.s_digits.currentText()),
+                     "period": int(self.s_period.currentText()),
                      "algo": self.c_algo.currentText().lower().replace("-", "")}
                 issuer = self.e_issuer.text().strip() or "Mi Servicio"
                 label = self.e_label.text().strip() or "Cuenta"
